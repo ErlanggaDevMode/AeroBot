@@ -1,0 +1,17 @@
+# Vercel Configuration
+.vercel/
+
+# Next.js local environment variables and build outputs
+web/.env*
+web/.env.local
+web/node_modules/
+web/.next/
+web/out/
+
+# Firmware private configuration
+TelegramBotTest/secrets.h
+
+# Miscellaneous files
+.DS_Store
+Thumbs.db
+*.log
