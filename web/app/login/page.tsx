@@ -49,10 +49,8 @@ export default function LoginPage() {
         
         {/* Logo and Headings */}
         <div className="flex flex-col items-center gap-3 text-center mb-8">
-          <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-emerald-400 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-indigo-500/25">
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-            </svg>
+          <div className="h-14 w-14 rounded-2xl overflow-hidden shadow-lg shadow-indigo-500/25 border border-indigo-500/30">
+            <img src="/logo.png" alt="AeroBot Logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">

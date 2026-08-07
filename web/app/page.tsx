@@ -244,10 +244,8 @@ export default function Dashboard() {
       <header className="border-b border-slate-900 bg-slate-950/40 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-emerald-400 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-indigo-500/20">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
-              </svg>
+            <div className="h-10 w-10 rounded-xl overflow-hidden shadow-lg shadow-indigo-500/20 border border-indigo-500/30">
+              <img src="/logo.png" alt="AeroBot Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
@@ -309,62 +307,79 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Overview Stats Row */}
+        {/* Single-Station Overview Header Row */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div className="border border-slate-900 bg-slate-950/20 p-5 rounded-2xl flex items-center justify-between">
+          {/* Station Identity Card */}
+          <div className="border border-slate-800/80 bg-slate-900/40 backdrop-blur-xl p-5 rounded-2xl flex items-center justify-between shadow-lg">
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Device Network</p>
-              <h3 className="text-2xl font-bold mt-1 text-slate-200">{devices.length} Units</h3>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Monitored Station</p>
+              <h3 className="text-xl font-extrabold mt-1 text-slate-100 font-mono">
+                main-esp32
+              </h3>
+              <p className="text-xs text-indigo-400 font-semibold mt-0.5">Primary Solar Node</p>
             </div>
-            <div className="h-11 w-11 rounded-xl bg-slate-900 flex items-center justify-center text-slate-400">
+            <div className="h-11 w-11 rounded-xl bg-indigo-950/40 border border-indigo-800/40 flex items-center justify-center text-indigo-400 shadow-inner">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
           </div>
-          <div className="border border-slate-900 bg-slate-950/20 p-5 rounded-2xl flex items-center justify-between">
+
+          {/* Live Link Status Card */}
+          <div className="border border-slate-800/80 bg-slate-900/40 backdrop-blur-xl p-5 rounded-2xl flex items-center justify-between shadow-lg">
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Online Status</p>
-              <h3 className="text-2xl font-bold mt-1 text-emerald-400">
-                {devices.filter((d) => d.status === 'online').length} Online
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Cloud Connection</p>
+              <h3 className={`text-xl font-extrabold mt-1 ${activeDevice?.status === 'online' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {activeDevice?.status === 'online' ? 'Station Online' : 'Waiting for Stream'}
               </h3>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">
+                {latestLog ? 'Real-Time Sync Active' : 'Offline / Standby'}
+              </p>
             </div>
-            <div className="h-11 w-11 rounded-xl bg-emerald-950/20 flex items-center justify-center text-emerald-400">
+            <div className={`h-11 w-11 rounded-xl flex items-center justify-center border shadow-inner ${
+              activeDevice?.status === 'online'
+                ? 'bg-emerald-950/30 text-emerald-400 border-emerald-800/40'
+                : 'bg-rose-950/30 text-rose-400 border-rose-800/40'
+            }`}>
               <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                {activeDevice?.status === 'online' && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                )}
+                <span className={`relative inline-flex rounded-full h-3 w-3 ${activeDevice?.status === 'online' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
               </span>
             </div>
           </div>
-          <div className="border border-slate-900 bg-slate-950/20 p-5 rounded-2xl flex items-center justify-between">
+
+          {/* Network Uplink Mode Card */}
+          <div className="border border-slate-800/80 bg-slate-900/40 backdrop-blur-xl p-5 rounded-2xl flex items-center justify-between shadow-lg">
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Inactive Status</p>
-              <h3 className="text-2xl font-bold mt-1 text-slate-400">
-                {devices.filter((d) => d.status === 'offline').length} Offline
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Network Uplink</p>
+              <h3 className="text-xl font-extrabold mt-1 text-sky-400">
+                WiFi + GSM Failover
               </h3>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">
+                RSSI: {latestLog?.rssi !== null && latestLog?.rssi !== undefined ? `${latestLog.rssi} dBm` : 'N/A'}
+              </p>
             </div>
-            <div className="h-11 w-11 rounded-xl bg-slate-900 flex items-center justify-center text-slate-500">
-              <span className="h-3 w-3 rounded-full bg-slate-700" />
+            <div className="h-11 w-11 rounded-xl bg-sky-950/30 border border-sky-800/40 flex items-center justify-center text-sky-400 shadow-inner">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856a9.375 9.375 0 0113.788 0M1.924 8.674a13.5 13.5 0 0120.152 0M12 18.75h.008v.008H12v-.008z" />
+              </svg>
             </div>
           </div>
-          <div className="border border-slate-900 bg-slate-950/20 p-5 rounded-2xl flex items-center justify-between">
+
+          {/* Firmware & Hardware Spec Card */}
+          <div className="border border-slate-800/80 bg-slate-900/40 backdrop-blur-xl p-5 rounded-2xl flex items-center justify-between shadow-lg">
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Default Target</p>
-              <select
-                value={selectedDeviceId}
-                onChange={(e) => setSelectedDeviceId(e.target.value)}
-                className="mt-1 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-sm font-semibold text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer"
-              >
-                {devices.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.id} ({d.status})
-                  </option>
-                ))}
-              </select>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System Build</p>
+              <h3 className="text-xl font-extrabold mt-1 text-amber-400">
+                Firmware v1.2
+              </h3>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">Wind + LCD Enabled</p>
             </div>
-            <div className="h-11 w-11 rounded-xl bg-slate-900 flex items-center justify-center text-slate-400">
+            <div className="h-11 w-11 rounded-xl bg-amber-950/30 border border-amber-800/40 flex items-center justify-center text-amber-400 shadow-inner">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l5.654-4.654" />
               </svg>
             </div>
           </div>
@@ -374,8 +389,8 @@ export default function Dashboard() {
         {activeDevice ? (
           <div className="flex flex-col gap-8">
 
-            {/* Dashboard Telemetry Cards */}
-            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+            {/* Dashboard Telemetry Cards: 6-Column Responsive Single Row Layout */}
+            <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-5">
 
               {/* Temperature Telemetry Card */}
               <div className="border border-slate-800/60 bg-slate-900/30 backdrop-blur-md p-5 rounded-2xl flex flex-col justify-between h-40">
