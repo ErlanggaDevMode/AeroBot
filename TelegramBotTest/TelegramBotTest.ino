@@ -20,7 +20,7 @@
 #include "secrets.h"
 
 // Hardware Pins
-#define SOIL_PIN 33
+#define SOIL_PIN 34
 #define BATTERY_PIN 32
 #define SOLAR_VOLT_PIN 35
 #define SOLAR_CHARGE_PIN 25
