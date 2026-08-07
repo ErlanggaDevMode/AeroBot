@@ -71,20 +71,21 @@ if (!globalRef.mockDevices) {
     updated_at: new Date().toISOString(),
   });
 
-  // Seed default history
+  // Seed rich telemetry history for multi-timeframe enterprise charts
   const now = Date.now();
-  for (let i = 24; i >= 0; i--) {
-    const time = new Date(now - i * 60 * 60 * 1000).toISOString();
+  for (let i = 48; i >= 0; i--) {
+    const time = new Date(now - i * 30 * 60 * 1000).toISOString(); // Every 30 minutes
+    const isDaylight = (i % 24) >= 6 && (i % 24) <= 18;
     globalRef.mockLogs.push({
       id: globalRef.logCounter++,
       device_id: 'main-esp32',
-      temperature: 24.5 + Math.sin(i / 3) * 3 + Math.random(),
-      humidity: 65.0 + Math.cos(i / 4) * 8 + Math.random() * 2,
-      soil: 50 + Math.round(Math.sin(i / 5) * 5),
-      battery_voltage: 12.8 + Math.sin(i / 10) * 0.4,
-      solar_status: i % 12 < 6 ? 'charging' : 'idle',
-      rssi: -60 + Math.round(Math.random() * 10),
-      wind_speed: parseFloat((3.5 + Math.sin(i / 2) * 2.5 + Math.random()).toFixed(1)),
+      temperature: parseFloat((25.2 + Math.sin(i / 4) * 4.5 + Math.random() * 0.8).toFixed(1)),
+      humidity: parseFloat((62.0 + Math.cos(i / 5) * 12.0 + Math.random() * 1.5).toFixed(1)),
+      soil: Math.min(100, Math.max(20, 58 + Math.round(Math.sin(i / 6) * 10 + (Math.random() - 0.5) * 3))),
+      battery_voltage: parseFloat((12.85 + Math.sin(i / 12) * 0.45 + (isDaylight ? 0.2 : -0.1)).toFixed(2)),
+      solar_status: isDaylight ? 'charging' : 'idle',
+      rssi: -58 + Math.round((Math.random() - 0.5) * 8),
+      wind_speed: parseFloat((3.8 + Math.sin(i / 3) * 3.2 + Math.random() * 1.2).toFixed(1)),
       created_at: time,
     });
   }

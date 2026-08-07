@@ -6,9 +6,33 @@ import { getDevices, getSensorLogs } from '@/lib/supabase';
 
 export async function GET() {
   try {
-    const devices = await getDevices();
-    
-    // Fetch latest sensor reading for each device
+    let devices = await getDevices();
+
+    // Single-device filter: Ensure main-esp32 is present and prioritized
+    if (devices.length > 0) {
+      const mainDev = devices.find((d) => d.id === 'main-esp32');
+      if (mainDev) {
+        devices = [mainDev];
+      } else {
+        // Filter out old test devices if main-esp32 exists
+        devices = devices.filter((d) => d.id === 'main-esp32');
+        if (devices.length === 0) {
+          devices = [{
+            id: 'main-esp32',
+            device_name: 'AeroBot Solar Station (main-esp32)',
+            location: 'Outdoor Field Station',
+            firmware_version: '1.2',
+            status: 'offline',
+            last_seen: null,
+            pending_command: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }];
+        }
+      }
+    }
+
+    // Fetch latest sensor reading for the primary device
     const devicesWithLogs = await Promise.all(
       devices.map(async (device) => {
         const logs = await getSensorLogs(device.id, 1);
