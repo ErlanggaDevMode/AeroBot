@@ -178,8 +178,8 @@ void readSensors() {
     int solarRaw = analogRead(SOLAR_VOLT_PIN);
     curSolarVolt = solarRaw * SOLAR_VOLT_MULTIPLIER;
     
-    // Active low charging indicator pin (Low value means charging)
-    isCharging = (digitalRead(SOLAR_CHARGE_PIN) == LOW);
+    // Auto-detect charging status (via status pin if connected, or automatic solar vs battery voltage comparison)
+    isCharging = (digitalRead(SOLAR_CHARGE_PIN) == LOW) || (curSolarVolt > (curBatVolt + 0.5));
 
     // Calculate wind speed in m/s (1 pulse/sec = ~0.667 m/s)
     unsigned long now = millis();
