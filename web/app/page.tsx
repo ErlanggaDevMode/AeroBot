@@ -63,7 +63,7 @@ function CustomLineChart({
   }, '');
 
   // Fill path for area gradient
-  const fillD = points.length > 0 
+  const fillD = points.length > 0
     ? `${pathD} L ${points[points.length - 1].x} ${height - paddingY} L ${points[0].x} ${height - paddingY} Z`
     : '';
 
@@ -75,7 +75,7 @@ function CustomLineChart({
           {values.length > 0 ? `${values[values.length - 1].toFixed(1)}${unit}` : '--'}
         </span>
       </div>
-      
+
       <div className="relative w-full h-36">
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
           <defs>
@@ -132,7 +132,7 @@ function CustomLineChart({
 export default function Dashboard() {
   const router = useRouter();
   const [devices, setDevices] = useState<(Device & { latest_log: SensorLog | null })[]>([]);
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('ESP32-001');
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('main-esp32');
   const [history, setHistory] = useState<SensorLog[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [rebooting, setRebooting] = useState<boolean>(false);
@@ -167,7 +167,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchStatusAndHistory(selectedDeviceId);
-    
+
     // Auto-refresh every 20 seconds
     const interval = setInterval(() => {
       fetchStatusAndHistory(selectedDeviceId);
@@ -287,15 +287,14 @@ export default function Dashboard() {
 
       {/* Main Grid Content */}
       <main className="max-w-7xl mx-auto px-6 py-8 w-full flex-grow flex flex-col gap-8">
-        
+
         {/* Banner Alert Notification */}
         {notif && (
           <div
-            className={`p-4 rounded-xl border flex items-center gap-3 transition-all duration-300 ${
-              notif.type === 'success'
-                ? 'border-emerald-800/80 bg-emerald-950/20 text-emerald-300'
-                : 'border-red-800/80 bg-red-950/20 text-red-300'
-            }`}
+            className={`p-4 rounded-xl border flex items-center gap-3 transition-all duration-300 ${notif.type === 'success'
+              ? 'border-emerald-800/80 bg-emerald-950/20 text-emerald-300'
+              : 'border-red-800/80 bg-red-950/20 text-red-300'
+              }`}
           >
             {notif.type === 'success' ? (
               <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -374,10 +373,10 @@ export default function Dashboard() {
         {/* Selected Device Data */}
         {activeDevice ? (
           <div className="flex flex-col gap-8">
-            
+
             {/* Dashboard Telemetry Cards */}
             <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
-              
+
               {/* Temperature Telemetry Card */}
               <div className="border border-slate-800/60 bg-slate-900/30 backdrop-blur-md p-5 rounded-2xl flex flex-col justify-between h-40">
                 <div className="flex items-center justify-between">
@@ -396,8 +395,8 @@ export default function Dashboard() {
                   </h3>
                 </div>
                 <div className="w-full bg-slate-950/60 h-1.5 rounded-full mt-3 overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-orange-500 to-rose-500 transition-all duration-500" 
+                  <div
+                    className="h-full bg-gradient-to-r from-orange-500 to-rose-500 transition-all duration-500"
                     style={{ width: `${Math.min(100, Math.max(0, ((latestLog?.temperature || 0) / 50) * 100))}%` }}
                   />
                 </div>
@@ -421,8 +420,8 @@ export default function Dashboard() {
                   </h3>
                 </div>
                 <div className="w-full bg-slate-950/60 h-1.5 rounded-full mt-3 overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-all duration-500" 
+                  <div
+                    className="h-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-all duration-500"
                     style={{ width: `${latestLog?.humidity || 0}%` }}
                   />
                 </div>
@@ -446,8 +445,8 @@ export default function Dashboard() {
                   </h3>
                 </div>
                 <div className="w-full bg-slate-950/60 h-1.5 rounded-full mt-3 overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-amber-600 to-emerald-500 transition-all duration-500" 
+                  <div
+                    className="h-full bg-gradient-to-r from-amber-600 to-emerald-500 transition-all duration-500"
                     style={{ width: `${latestLog?.soil || 0}%` }}
                   />
                 </div>
@@ -474,8 +473,8 @@ export default function Dashboard() {
                   </p>
                 </div>
                 <div className="w-full bg-slate-950/60 h-1.5 rounded-full mt-3 overflow-hidden">
-                  <div 
-                    className="h-full bg-emerald-500 transition-all duration-500" 
+                  <div
+                    className="h-full bg-emerald-500 transition-all duration-500"
                     style={{ width: `${getBatteryPercentage(latestLog?.battery_voltage || null)}%` }}
                   />
                 </div>
@@ -500,13 +499,42 @@ export default function Dashboard() {
                   </p>
                 </div>
                 <div className="w-full mt-3">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block ${
-                    latestLog?.solar_status === 'charging' 
-                      ? 'bg-amber-950/40 text-amber-400 border border-amber-800/40' 
-                      : 'bg-slate-900/60 text-slate-400 border border-slate-800/40'
-                  }`}>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block ${latestLog?.solar_status === 'charging'
+                    ? 'bg-amber-950/40 text-amber-400 border border-amber-800/40'
+                    : 'bg-slate-900/60 text-slate-400 border border-slate-800/40'
+                    }`}>
                     Solar Status: {latestLog?.solar_status === 'charging' ? 'ACTIVE' : 'STANDBY'}
                   </span>
+                </div>
+              </div>
+
+              {/* Wind Speed Anemometer Telemetry Card */}
+              <div className="border border-slate-800/60 bg-slate-900/30 backdrop-blur-md p-5 rounded-2xl flex flex-col justify-between h-40">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Wind Speed</span>
+                  <div className="text-teal-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <h3 className="text-3xl font-bold tracking-tight">
+                    {latestLog?.wind_speed !== null && latestLog?.wind_speed !== undefined
+                      ? `${latestLog.wind_speed.toFixed(1)} m/s`
+                      : 'N/A'}
+                  </h3>
+                  <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                    {latestLog?.wind_speed !== null && latestLog?.wind_speed !== undefined
+                      ? `${(latestLog.wind_speed * 3.6).toFixed(1)} km/h`
+                      : 'Sensor Offline'}
+                  </p>
+                </div>
+                <div className="w-full bg-slate-950/60 h-1.5 rounded-full mt-3 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-teal-500 to-cyan-400 transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.max(0, ((latestLog?.wind_speed || 0) / 20) * 100))}%` }}
+                  />
                 </div>
               </div>
 
@@ -517,19 +545,20 @@ export default function Dashboard() {
               <CustomLineChart data={history} dataKey="temperature" color="#F43F5E" title="Temperature History (°C)" unit="°C" />
               <CustomLineChart data={history} dataKey="humidity" color="#0EA5E9" title="Humidity History (%)" unit="%" />
               <CustomLineChart data={history} dataKey="soil" color="#10B981" title="Soil Moisture History (%)" unit="%" />
+              <CustomLineChart data={history} dataKey="wind_speed" color="#14B8A6" title="Wind Speed Anemometer (m/s)" unit=" m/s" />
               <CustomLineChart data={history} dataKey="battery_voltage" color="#F59E0B" title="Battery Voltage History (V)" unit="V" />
             </section>
 
             {/* Hardware Status / Control Panel */}
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
+
               {/* Technical Specifications */}
               <div className="border border-slate-900 bg-slate-950/20 p-6 rounded-2xl flex flex-col gap-4 col-span-2">
                 <h3 className="text-base font-bold text-slate-200 flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-indigo-500" />
                   Hardware Specifications & Metadata
                 </h3>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mt-2">
                   <div className="flex justify-between border-b border-slate-900 pb-2">
                     <span className="text-slate-500">Device ID:</span>
@@ -568,7 +597,7 @@ export default function Dashboard() {
                     Remote Diagnostics & Control
                   </h3>
                   <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                    Issue physical hardware commands directly to the ESP32 monitor. 
+                    Issue physical hardware commands directly to the ESP32 monitor.
                     Commands are stored securely in the database and dispatched during the next client upload request.
                   </p>
                 </div>

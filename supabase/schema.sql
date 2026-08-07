@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS sensor_logs (
     battery_voltage NUMERIC,                   -- Battery voltage in Volts
     solar_status TEXT,                         -- Solar state e.g. 'charging', 'idle'
     rssi INTEGER,                              -- WiFi signal strength in dBm
+    wind_speed NUMERIC,                        -- Wind Speed in m/s (Anemometer)
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

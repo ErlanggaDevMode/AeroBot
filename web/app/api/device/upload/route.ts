@@ -10,7 +10,7 @@ async function sendTelegramNotification(message: string): Promise<boolean> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
-  if (!token || !chatId || token.includes('8920961595:') && token.startsWith('your')) {
+  if (!token || !chatId || token.includes('your-')) {
     console.warn('⚠️ [Telegram Bot] Token/ChatID not configured or is a placeholder. Skipping notification.');
     return false;
   }
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
 
     // 2. Parse and Validate Request Body
     const body = await request.json();
-    const { deviceId, temperature, humidity, soil, battery, solar, rssi, uptime, version } = body;
+    const { deviceId, temperature, humidity, soil, battery, solar, rssi, windSpeed, wind_speed, uptime, version } = body;
 
     if (!deviceId || typeof deviceId !== 'string') {
       return NextResponse.json({ error: 'Invalid deviceId' }, { status: 400 });
@@ -63,9 +63,11 @@ export async function POST(request: Request) {
     const batVal = typeof battery === 'number' && !isNaN(battery) ? battery : null;
     const solarVal = typeof solar === 'string' ? solar : 'unknown';
     const rssiVal = typeof rssi === 'number' ? rssi : null;
+    const rawWind = typeof windSpeed === 'number' ? windSpeed : typeof wind_speed === 'number' ? wind_speed : null;
+    const windVal = rawWind !== null && !isNaN(rawWind) ? rawWind : null;
     const fVersion = typeof version === 'string' ? version : '1.0';
 
-    console.log(`📡 [Upload API] Received telemetry from [${deviceId}]: Temp: ${tempVal}°C, Bat: ${batVal}V, Solar: ${solarVal}`);
+    console.log(`📡 [Upload API] Received telemetry from [${deviceId}]: Temp: ${tempVal}°C, Bat: ${batVal}V, Wind: ${windVal} m/s`);
 
     // Fetch existing device state to inspect transitions
     const deviceState = await getDevice(deviceId);
@@ -87,16 +89,30 @@ export async function POST(request: Request) {
 
     const pendingCommand = updatedDevice.pending_command;
 
-    // 4. Log Sensor Telemetry
-    await insertSensorLog({
-      device_id: deviceId,
-      temperature: tempVal,
-      humidity: humVal,
-      soil: soilVal,
-      battery_voltage: batVal,
-      solar_status: solarVal,
-      rssi: rssiVal,
-    });
+    // 4. Log Sensor Telemetry (with graceful fallback if DB schema hasn't added wind_speed yet)
+    try {
+      await insertSensorLog({
+        device_id: deviceId,
+        temperature: tempVal,
+        humidity: humVal,
+        soil: soilVal,
+        battery_voltage: batVal,
+        solar_status: solarVal,
+        rssi: rssiVal,
+        wind_speed: windVal,
+      });
+    } catch (dbErr: any) {
+      console.warn('⚠️ [Upload API] Failed to log telemetry with wind_speed, retrying without wind_speed:', dbErr.message);
+      await insertSensorLog({
+        device_id: deviceId,
+        temperature: tempVal,
+        humidity: humVal,
+        soil: soilVal,
+        battery_voltage: batVal,
+        solar_status: solarVal,
+        rssi: rssiVal,
+      });
+    }
 
     // 5. Run Alert Checks and State Transitions
     const notifications: string[] = [];

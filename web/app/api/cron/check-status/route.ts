@@ -10,7 +10,7 @@ async function sendTelegramNotification(message: string): Promise<boolean> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
-  if (!token || !chatId || token.includes('8920961595:') && token.startsWith('your')) {
+  if (!token || !chatId || token.includes('your-')) {
     console.warn('⚠️ [Telegram Cron] Token/ChatID not configured. Skipping alert.');
     return false;
   }

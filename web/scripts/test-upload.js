@@ -3,12 +3,26 @@
 // Launches test requests representing the ESP32 upload and Telegram webhook.
 // Usage: node test-upload.js [server-url] (default: http://127.0.0.1:3000)
 
+const fs = require('fs');
+const path = require('path');
+
 const serverUrl = process.argv[2] || 'http://127.0.0.1:3000';
 const uploadEndpoint = `${serverUrl}/api/device/upload`;
 const webhookEndpoint = `${serverUrl}/api/telegram/webhook`;
 
-const apiKey = 'aero_secret_upload_key_123!';
-const testDeviceId = 'ESP32-001';
+// Load key dynamically from env or .env.local
+let apiKey = process.env.ESP32_API_KEY;
+if (!apiKey) {
+  const envPath = path.join(__dirname, '..', '.env.local');
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    const match = envContent.match(/ESP32_API_KEY\s*=\s*(.+)/);
+    if (match) apiKey = match[1].trim();
+  }
+}
+
+apiKey = apiKey || 'aero_secret_upload_key_123!';
+const testDeviceId = 'main-esp32';
 
 console.log(`\n🧪 Starting API Verification Tests against: ${serverUrl}\n`);
 
@@ -55,8 +69,9 @@ async function runTests() {
       battery: 12.92,
       solar: 'charging',
       rssi: -58,
+      windSpeed: 4.5,
       uptime: 120,
-      version: '1.1'
+      version: '1.2'
     };
 
     const res3 = await fetch(uploadEndpoint, {

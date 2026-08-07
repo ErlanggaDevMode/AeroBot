@@ -32,14 +32,21 @@ export async function POST(request: Request) {
     }
 
     const chatId = body.message.chat.id;
+    const chatTitle = body.message.chat.title || '';
     const text = body.message.text.trim();
     const fromName = body.message.from?.first_name || 'User';
 
-    // 1. Authorize User
-    const allowedChatId = process.env.TELEGRAM_CHAT_ID;
-    if (String(chatId) !== String(allowedChatId)) {
-      console.warn(`⚠️ [Telegram Webhook] Unauthorized access attempt from Chat ID: ${chatId}`);
-      await replyToTelegram(chatId, '❌ *Unauthorized User*\nYou do not have permissions to access this IoT platform.');
+    // Extract command ignoring @botusername suffix in groups (e.g. /status@AeroBot -> /status)
+    const rawCommand = text.split(' ')[0].split('@')[0].toLowerCase();
+
+    // 1. Authorize User / Group
+    const allowedChatIds = (process.env.TELEGRAM_CHAT_ID || '')
+      .split(',')
+      .map((id) => id.trim());
+
+    if (allowedChatIds.length > 0 && allowedChatIds[0] !== '' && !allowedChatIds.includes(String(chatId))) {
+      console.warn(`⚠️ [Telegram Webhook] Unauthorized access attempt from Chat ID: ${chatId} (${chatTitle || 'Private'})`);
+      await replyToTelegram(chatId, `❌ *Unauthorized Chat / Group*\nChat ID \`${chatId}\` is not permitted to access this IoT platform.`);
       return NextResponse.json({ ok: true });
     }
 
@@ -54,13 +61,14 @@ export async function POST(request: Request) {
     };
 
     // 3. Command Handler
-    if (text === '/start') {
-      let welcome = `Halo *${fromName}* 👋\n\n`;
+    if (rawCommand === '/start') {
+      let welcome = `Halo *${fromName}* 👋${chatTitle ? ` (Group: *${chatTitle}*)` : ''}\n\n`;
       welcome += `*ESP32 IoT Outdoor System Online*\n\n`;
       welcome += `/status - System Overview\n`;
       welcome += `/temp - Temperature\n`;
       welcome += `/humidity - Humidity\n`;
       welcome += `/soil - Soil Moisture\n`;
+      welcome += `/wind - Wind Speed Anemometer\n`;
       welcome += `/battery - Battery Status\n`;
       welcome += `/solar - Solar Status\n`;
       welcome += `/network - Network Info\n`;
@@ -69,15 +77,15 @@ export async function POST(request: Request) {
       welcome += `/version - Firmware Version\n`;
       await replyToTelegram(chatId, welcome);
     } 
-    else if (text === '/help') {
+    else if (rawCommand === '/help') {
       let help = `*Available Commands:*\n\n`;
-      help += `/status, /temp, /humidity, /soil, /battery, /solar, /network, /ping, /reboot, /version`;
+      help += `/status, /temp, /humidity, /soil, /wind, /battery, /solar, /network, /ping, /reboot, /version`;
       await replyToTelegram(chatId, help);
     } 
-    else if (text === '/ping') {
+    else if (rawCommand === '/ping') {
       await replyToTelegram(chatId, '🏓 *Pong!*\nNext.js Serverless Webhook is active and responsive.');
     } 
-    else if (text === '/status') {
+    else if (rawCommand === '/status') {
       if (!defaultDevice) {
         await replyToTelegram(chatId, '⚠️ No devices found in database.');
       } else {
@@ -96,6 +104,7 @@ export async function POST(request: Request) {
           status += `🌡️ *Temp:* ${reading.temperature !== null ? `${reading.temperature.toFixed(1)} °C` : 'Error'}\n`;
           status += `💧 *Humidity:* ${reading.humidity !== null ? `${reading.humidity.toFixed(1)} %` : 'Error'}\n`;
           status += `🌱 *Soil Moisture:* ${reading.soil !== null ? `${reading.soil} %` : 'Error'}\n`;
+          status += `💨 *Wind Speed:* ${reading.wind_speed !== null && reading.wind_speed !== undefined ? `${reading.wind_speed.toFixed(1)} m/s` : 'N/A'}\n`;
           status += `🔋 *Battery:* ${reading.battery_voltage !== null ? `${reading.battery_voltage.toFixed(2)} V` : 'Error'}\n`;
           status += `☀️ *Solar Panel:* ${reading.solar_status === 'charging' ? '⚡ Charging' : '💤 Idle'}\n`;
           status += `📶 *Signal (RSSI):* ${reading.rssi !== null ? `${reading.rssi} dBm` : 'Unknown'}\n`;
@@ -105,7 +114,7 @@ export async function POST(request: Request) {
         await replyToTelegram(chatId, status);
       }
     } 
-    else if (text === '/temp') {
+    else if (rawCommand === '/temp') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
       if (reading && reading.temperature !== null) {
@@ -114,7 +123,7 @@ export async function POST(request: Request) {
         await replyToTelegram(chatId, '❌ Sensor Error: Temperature reading not available.');
       }
     } 
-    else if (text === '/humidity') {
+    else if (rawCommand === '/humidity') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
       if (reading && reading.humidity !== null) {
@@ -123,7 +132,7 @@ export async function POST(request: Request) {
         await replyToTelegram(chatId, '❌ Sensor Error: Humidity reading not available.');
       }
     } 
-    else if (text === '/soil') {
+    else if (rawCommand === '/soil') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
       if (reading && reading.soil !== null) {
@@ -132,7 +141,17 @@ export async function POST(request: Request) {
         await replyToTelegram(chatId, '❌ Sensor Error: Soil moisture reading not available.');
       }
     } 
-    else if (text === '/battery') {
+    else if (rawCommand === '/wind') {
+      if (!defaultDevice) return;
+      const reading = await getLatestReading(defaultDevice.id);
+      if (reading && reading.wind_speed !== null && reading.wind_speed !== undefined) {
+        const kmh = (reading.wind_speed * 3.6).toFixed(1);
+        await replyToTelegram(chatId, `💨 *Wind Speed (Anemometer):*\nSpeed: *${reading.wind_speed.toFixed(1)} m/s* (${kmh} km/h)`);
+      } else {
+        await replyToTelegram(chatId, '❌ Sensor Error: Wind speed reading not available.');
+      }
+    } 
+    else if (rawCommand === '/battery') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
       if (reading && reading.battery_voltage !== null) {
@@ -142,7 +161,7 @@ export async function POST(request: Request) {
         await replyToTelegram(chatId, '❌ Battery voltage monitoring not available.');
       }
     } 
-    else if (text === '/solar') {
+    else if (rawCommand === '/solar') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
       if (reading) {
@@ -151,7 +170,7 @@ export async function POST(request: Request) {
         await replyToTelegram(chatId, '❌ Solar panel status not available.');
       }
     } 
-    else if (text === '/network') {
+    else if (rawCommand === '/network') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
       let net = `📶 *Network Status:*\n`;
@@ -161,15 +180,15 @@ export async function POST(request: Request) {
       }
       await replyToTelegram(chatId, net);
     } 
-    else if (text === '/reboot') {
+    else if (rawCommand === '/reboot') {
       if (!defaultDevice) {
         await replyToTelegram(chatId, '⚠️ No devices found to reboot.');
       } else {
         await upsertDevice(defaultDevice.id, { pending_command: 'reboot' });
-        await replyToTelegram(chatId, `🔄 *Reboot Queue Command*\nReboot command is successfully queued for device \`${defaultDevice.id}\`.\nIt will execute on the next upload cycle.`);
+        await replyToTelegram(chatId, `🔄 *Reboot Queue Command*\nReboot command is successfully queued by *${fromName}* for device \`${defaultDevice.id}\`.\nIt will execute on the next upload cycle.`);
       }
     } 
-    else if (text === '/version') {
+    else if (rawCommand === '/version') {
       if (defaultDevice) {
         await replyToTelegram(chatId, `🏷️ *Firmware Version:* ${defaultDevice.firmware_version || '1.0'}`);
       } else {

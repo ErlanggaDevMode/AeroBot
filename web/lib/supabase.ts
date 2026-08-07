@@ -23,6 +23,7 @@ export interface SensorLog {
   battery_voltage: number | null;
   solar_status: string | null;
   rssi: number | null;
+  wind_speed?: number | null;
   created_at: string;
 }
 
@@ -57,12 +58,12 @@ if (!globalRef.mockDevices) {
   globalRef.logCounter = 1;
   globalRef.alertCounter = 1;
 
-  // Insert default prototype device for UI rendering test
-  globalRef.mockDevices.set('ESP32-001', {
-    id: 'ESP32-001',
-    device_name: 'Outdoor Solar Unit 1',
-    location: 'Garden Greenhouse A',
-    firmware_version: '1.1',
+  // Insert single primary device for single-unit IoT platform
+  globalRef.mockDevices.set('main-esp32', {
+    id: 'main-esp32',
+    device_name: 'AeroBot Solar Unit (main-esp32)',
+    location: 'Outdoor Field Station',
+    firmware_version: '1.2',
     status: 'online',
     last_seen: new Date().toISOString(),
     pending_command: null,
@@ -76,13 +77,14 @@ if (!globalRef.mockDevices) {
     const time = new Date(now - i * 60 * 60 * 1000).toISOString();
     globalRef.mockLogs.push({
       id: globalRef.logCounter++,
-      device_id: 'ESP32-001',
+      device_id: 'main-esp32',
       temperature: 24.5 + Math.sin(i / 3) * 3 + Math.random(),
       humidity: 65.0 + Math.cos(i / 4) * 8 + Math.random() * 2,
       soil: 50 + Math.round(Math.sin(i / 5) * 5),
       battery_voltage: 12.8 + Math.sin(i / 10) * 0.4,
       solar_status: i % 12 < 6 ? 'charging' : 'idle',
       rssi: -60 + Math.round(Math.random() * 10),
+      wind_speed: parseFloat((3.5 + Math.sin(i / 2) * 2.5 + Math.random()).toFixed(1)),
       created_at: time,
     });
   }

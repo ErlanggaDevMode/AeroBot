@@ -20,9 +20,9 @@ if (!token) {
   }
 }
 
-if (!token || token.includes('your-') || token.startsWith('8920961595:AAEfc')) {
-  // Use the default/actual token if none found
-  token = '8920961595:AAEfcCzxBdbFRdxLu2sCD4TbxH5siQN7NqM';
+if (!token || token.includes('your-')) {
+  console.error('\n❌ Error: TELEGRAM_BOT_TOKEN environment variable is not configured in web/.env.local');
+  process.exit(1);
 }
 
 const domain = process.argv[2];

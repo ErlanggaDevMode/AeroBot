@@ -2,13 +2,27 @@
 // Automated test script to validate authentication middleware and endpoints.
 // Usage: node test-auth.js [server-url] (default: http://127.0.0.1:3000)
 
+const fs = require('fs');
+const path = require('path');
+
 const serverUrl = process.argv[2] || 'http://127.0.0.1:3000';
 const loginEndpoint = `${serverUrl}/api/auth/login`;
 const logoutEndpoint = `${serverUrl}/api/auth/logout`;
 const dashboardUrl = `${serverUrl}/`;
 const loginPageUrl = `${serverUrl}/login`;
 
-const correctPassword = 'aero_secret_upload_key_123!'; // Default fallback matching environment
+// Load password dynamically from env or .env.local
+let correctPassword = process.env.ADMIN_PASSWORD;
+if (!correctPassword) {
+  const envPath = path.join(__dirname, '..', '.env.local');
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    const match = envContent.match(/ADMIN_PASSWORD\s*=\s*(.+)/);
+    if (match) correctPassword = match[1].trim();
+  }
+}
+
+correctPassword = correctPassword || 'aero_secret_upload_key_123!';
 
 console.log(`\n🧪 Starting Dashboard Authentication Tests against: ${serverUrl}\n`);
 

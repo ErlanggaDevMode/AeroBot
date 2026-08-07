@@ -10,6 +10,7 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
+#include <LiquidCrystal_I2C.h>
 #include <ArduinoJson.h>
 #include <esp_task_wdt.h>
 
@@ -23,6 +24,7 @@
 #define BATTERY_PIN 33
 #define SOLAR_VOLT_PIN 35
 #define SOLAR_CHARGE_PIN 25
+#define WIND_PIN 14
 
 // SIM800L Pins
 #define SIM800_RX_PIN 16
@@ -33,6 +35,14 @@
 // Calibration
 #define SOIL_DRY_VAL 3200
 #define SOIL_WET_VAL 1200
+
+// Anemometer Pulse Counter (1 pulse/sec = 0.667 m/s)
+volatile unsigned long windPulseCount = 0;
+unsigned long lastWindCalculateTime = 0;
+
+void IRAM_ATTR countWindPulse() {
+    windPulseCount++;
+}
 
 // Voltage divider multipliers (Calibrate with a physical multimeter!)
 #define BAT_VOLT_MULTIPLIER 0.00446
@@ -54,6 +64,10 @@ TinyGsmClient gsmClient(modem);
 Adafruit_BME280 bme;
 bool bmeConnected = false;
 
+// LCD I2C Configuration (Default I2C Address 0x27, 16 Columns x 2 Rows)
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+bool lcdConnected = false;
+
 // Global State
 unsigned long lastUploadTime = 0;
 float curTemp = NAN;
@@ -61,6 +75,7 @@ float curHum = NAN;
 int curSoil = 0;
 float curBatVolt = 0.0;
 float curSolarVolt = 0.0;
+float curWindSpeed = 0.0;
 bool isCharging = false;
 int wifiRSSI = -100;
 
@@ -69,14 +84,77 @@ void resetWatchdog() {
     esp_task_wdt_reset();
 }
 
-// BME280 Initializer
+// BME280 & LCD Initializer
 void setupSensors() {
     Wire.begin();
+
+    // Initialize LCD I2C
+    lcd.init();
+    lcd.backlight();
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("AeroBot IoT v1.2");
+    lcd.setCursor(0, 1);
+    lcd.print("Booting System..");
+    lcdConnected = true;
+
     if (bme.begin(0x76)) {
         bmeConnected = true;
         Serial.println("BME280 sensor initialized successfully (0x76)");
     } else {
         Serial.println("Could not find a valid BME280 sensor! Check wiring.");
+    }
+}
+
+// Update 16x2 LCD I2C display with rotating telemetry pages
+void updateLCDDisplay() {
+    if (!lcdConnected) return;
+
+    static unsigned long lastLCDToggle = 0;
+    static int lcdPage = 0;
+
+    // Toggle display pages every 4 seconds
+    if (millis() - lastLCDToggle > 4000) {
+        lcdPage = (lcdPage + 1) % 2;
+        lastLCDToggle = millis();
+    }
+
+    lcd.clear();
+    if (lcdPage == 0) {
+        // Page 1: Temp, Humidity, Soil, Wind Speed
+        lcd.setCursor(0, 0);
+        if (!isnan(curTemp)) {
+            lcd.print("T:");
+            lcd.print(curTemp, 1);
+            lcd.print("C H:");
+            lcd.print(curHum, 0);
+            lcd.print("%");
+        } else {
+            lcd.print("Temp: Sensor Err");
+        }
+
+        lcd.setCursor(0, 1);
+        lcd.print("S:");
+        lcd.print(curSoil);
+        lcd.print("% W:");
+        lcd.print(curWindSpeed, 1);
+        lcd.print("m/s");
+    } else {
+        // Page 2: Battery Voltage, Solar Status, Network Strength
+        lcd.setCursor(0, 0);
+        lcd.print("Bat:");
+        lcd.print(curBatVolt, 2);
+        lcd.print("V ");
+        lcd.print(isCharging ? "CHG" : "BAT");
+
+        lcd.setCursor(0, 1);
+        if (WiFi.status() == WL_CONNECTED) {
+            lcd.print("Net:WiFi ");
+            lcd.print(WiFi.RSSI());
+            lcd.print("dBm");
+        } else {
+            lcd.print("Net:GSM Cellular");
+        }
     }
 }
 
@@ -102,6 +180,18 @@ void readSensors() {
     
     // Active low charging indicator pin (Low value means charging)
     isCharging = (digitalRead(SOLAR_CHARGE_PIN) == LOW);
+
+    // Calculate wind speed in m/s (1 pulse/sec = ~0.667 m/s)
+    unsigned long now = millis();
+    float elapsedSec = (now - lastWindCalculateTime) / 1000.0;
+    if (elapsedSec > 0) {
+        curWindSpeed = ((float)windPulseCount / elapsedSec) * 0.667;
+        windPulseCount = 0;
+        lastWindCalculateTime = now;
+    }
+
+    // Refresh LCD Onscreen Telemetry
+    updateLCDDisplay();
 }
 
 // SIM800L HW Boot up
@@ -302,11 +392,12 @@ void processUpload() {
     else doc["humidity"] = curHum;
     
     doc["soil"] = curSoil;
+    doc["windSpeed"] = curWindSpeed;
     doc["battery"] = curBatVolt;
     doc["solar"] = isCharging ? "charging" : "idle";
     doc["rssi"] = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : -100;
     doc["uptime"] = millis() / 1000;
-    doc["version"] = "1.1";
+    doc["version"] = "1.2";
 
     String jsonPayload;
     serializeJson(doc, jsonPayload);
@@ -345,6 +436,11 @@ void setup() {
     pinMode(SOLAR_VOLT_PIN, INPUT);
     pinMode(SOLAR_CHARGE_PIN, INPUT_PULLUP);
 
+    // Configure Anemometer Pulse Counter Pin & Interrupt
+    pinMode(WIND_PIN, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(WIND_PIN), countWindPulse, RISING);
+    lastWindCalculateTime = millis();
+
     setupSensors();
     resetWatchdog();
 
@@ -359,6 +455,9 @@ void setup() {
 
 void loop() {
     resetWatchdog();
+
+    // Rotate LCD Telemetry Pages
+    updateLCDDisplay();
 
     // Trigger upload on interval (non-blocking)
     if (millis() - lastUploadTime > UPLOAD_INTERVAL || lastUploadTime == 0) {
