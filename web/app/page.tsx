@@ -282,7 +282,7 @@ export default function EnterpriseDashboard() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
               </span>
-              <span className="text-emerald-400 font-semibold">MQTT Connected</span>
+              <span className="text-emerald-400 font-semibold">HTTP REST Uplink Active</span>
               <span className="text-slate-600">|</span>
               <span className="text-slate-400">{latency}ms</span>
             </div>
