@@ -307,16 +307,14 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Single-Station Overview Header Row */}
+        {/* Overview Stats Row (Device Online & Offline Indicators) */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {/* Station Identity Card */}
+          {/* Total Device Network */}
           <div className="border border-slate-800/80 bg-slate-900/40 backdrop-blur-xl p-5 rounded-2xl flex items-center justify-between shadow-lg">
             <div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Monitored Station</p>
-              <h3 className="text-xl font-extrabold mt-1 text-slate-100 font-mono">
-                main-esp32
-              </h3>
-              <p className="text-xs text-indigo-400 font-semibold mt-0.5">Primary Solar Node</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Device Network</p>
+              <h3 className="text-2xl font-extrabold mt-1 text-slate-100">1 Unit</h3>
+              <p className="text-xs text-indigo-400 font-semibold mt-0.5">main-esp32 Station</p>
             </div>
             <div className="h-11 w-11 rounded-xl bg-indigo-950/40 border border-indigo-800/40 flex items-center justify-center text-indigo-400 shadow-inner">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -325,61 +323,62 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Live Link Status Card */}
+          {/* Online Device Status */}
           <div className="border border-slate-800/80 bg-slate-900/40 backdrop-blur-xl p-5 rounded-2xl flex items-center justify-between shadow-lg">
             <div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Cloud Connection</p>
-              <h3 className={`text-xl font-extrabold mt-1 ${activeDevice?.status === 'online' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {activeDevice?.status === 'online' ? 'Station Online' : 'Waiting for Stream'}
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Online Status</p>
+              <h3 className="text-2xl font-extrabold mt-1 text-emerald-400">
+                {devices.filter((d) => d.status === 'online').length} Online
               </h3>
               <p className="text-xs text-slate-400 font-medium mt-0.5">
-                {latestLog ? 'Real-Time Sync Active' : 'Offline / Standby'}
+                {activeDevice?.status === 'online' ? 'Active Real-Time Stream' : 'No Devices Streaming'}
               </p>
             </div>
-            <div className={`h-11 w-11 rounded-xl flex items-center justify-center border shadow-inner ${
-              activeDevice?.status === 'online'
-                ? 'bg-emerald-950/30 text-emerald-400 border-emerald-800/40'
-                : 'bg-rose-950/30 text-rose-400 border-rose-800/40'
-            }`}>
-              <span className="relative flex h-3 w-3">
-                {activeDevice?.status === 'online' && (
+            <div className="h-11 w-11 rounded-xl bg-emerald-950/30 border border-emerald-800/40 flex items-center justify-center text-emerald-400 shadow-inner">
+              <span className="relative flex h-3.5 w-3.5">
+                {devices.some((d) => d.status === 'online') && (
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 )}
-                <span className={`relative inline-flex rounded-full h-3 w-3 ${activeDevice?.status === 'online' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+                <span className={`relative inline-flex rounded-full h-3.5 w-3.5 ${devices.some((d) => d.status === 'online') ? 'bg-emerald-500' : 'bg-slate-700'}`}></span>
               </span>
             </div>
           </div>
 
-          {/* Network Uplink Mode Card */}
+          {/* Inactive / Offline Status */}
           <div className="border border-slate-800/80 bg-slate-900/40 backdrop-blur-xl p-5 rounded-2xl flex items-center justify-between shadow-lg">
             <div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Network Uplink</p>
-              <h3 className="text-xl font-extrabold mt-1 text-sky-400">
-                WiFi + GSM Failover
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Inactive Status</p>
+              <h3 className="text-2xl font-extrabold mt-1 text-slate-400">
+                {devices.filter((d) => d.status === 'offline').length} Offline
               </h3>
               <p className="text-xs text-slate-400 font-medium mt-0.5">
-                RSSI: {latestLog?.rssi !== null && latestLog?.rssi !== undefined ? `${latestLog.rssi} dBm` : 'N/A'}
+                {activeDevice?.status === 'offline' ? 'Waiting for Hardware' : 'All Systems Operational'}
               </p>
             </div>
-            <div className="h-11 w-11 rounded-xl bg-sky-950/30 border border-sky-800/40 flex items-center justify-center text-sky-400 shadow-inner">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856a9.375 9.375 0 0113.788 0M1.924 8.674a13.5 13.5 0 0120.152 0M12 18.75h.008v.008H12v-.008z" />
-              </svg>
+            <div className="h-11 w-11 rounded-xl bg-slate-900 border border-slate-800/60 flex items-center justify-center text-slate-500 shadow-inner">
+              <span className={`h-3.5 w-3.5 rounded-full ${devices.some((d) => d.status === 'offline') ? 'bg-rose-500' : 'bg-slate-700'}`} />
             </div>
           </div>
 
-          {/* Firmware & Hardware Spec Card */}
+          {/* Target Station Switcher */}
           <div className="border border-slate-800/80 bg-slate-900/40 backdrop-blur-xl p-5 rounded-2xl flex items-center justify-between shadow-lg">
             <div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System Build</p>
-              <h3 className="text-xl font-extrabold mt-1 text-amber-400">
-                Firmware v1.2
-              </h3>
-              <p className="text-xs text-slate-400 font-medium mt-0.5">Wind + LCD Enabled</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Default Target</p>
+              <select
+                value={selectedDeviceId}
+                onChange={(e) => setSelectedDeviceId(e.target.value)}
+                className="mt-1 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-sm font-semibold text-slate-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
+              >
+                {devices.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.id} ({d.status})
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="h-11 w-11 rounded-xl bg-amber-950/30 border border-amber-800/40 flex items-center justify-center text-amber-400 shadow-inner">
+            <div className="h-11 w-11 rounded-xl bg-sky-950/30 border border-sky-800/40 flex items-center justify-center text-sky-400 shadow-inner">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l5.654-4.654" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
               </svg>
             </div>
           </div>
