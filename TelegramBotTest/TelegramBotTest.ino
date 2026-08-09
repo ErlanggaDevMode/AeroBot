@@ -84,9 +84,27 @@ void resetWatchdog() {
     esp_task_wdt_reset();
 }
 
-// BME280 & LCD Initializer
+// BME280 & LCD Initializer with automatic I2C bus scanner
 void setupSensors() {
     Wire.begin();
+    delay(100);
+
+    Serial.println("\n--- Scanning I2C Bus Devices ---");
+    int nDevices = 0;
+    for (byte address = 1; address < 127; address++) {
+        Wire.beginTransmission(address);
+        byte error = Wire.endTransmission();
+        if (error == 0) {
+            Serial.print("I2C device found at address 0x");
+            if (address < 16) Serial.print("0");
+            Serial.println(address, HEX);
+            nDevices++;
+        }
+    }
+    if (nDevices == 0) {
+        Serial.println("No I2C devices found! Please check SDA (GPIO21) and SCL (GPIO22) connections & 3.3V power.");
+    }
+    Serial.println("--------------------------------\n");
 
     // Initialize LCD I2C
     lcd.init();
@@ -98,11 +116,16 @@ void setupSensors() {
     lcd.print("Booting System..");
     lcdConnected = true;
 
+    // Try BME280 at default address 0x76, fallback to 0x77
     if (bme.begin(0x76)) {
         bmeConnected = true;
-        Serial.println("BME280 sensor initialized successfully (0x76)");
+        Serial.println("BME280 sensor initialized successfully at address 0x76");
+    } else if (bme.begin(0x77)) {
+        bmeConnected = true;
+        Serial.println("BME280 sensor initialized successfully at address 0x77");
     } else {
-        Serial.println("Could not find a valid BME280 sensor! Check wiring.");
+        bmeConnected = false;
+        Serial.println("Could not find a valid BME280 sensor at 0x76 or 0x77! Check wiring & power.");
     }
 }
 
@@ -430,7 +453,10 @@ void setup() {
     esp_task_wdt_add(NULL);
     resetWatchdog();
 
-    // Set hardware modes
+    // Set hardware modes & full 0-3.3V ADC attenuation
+    analogSetAttenuation(ADC_11db);
+    analogReadResolution(12);
+
     pinMode(SOIL_PIN, INPUT);
     pinMode(BATTERY_PIN, INPUT);
     pinMode(SOLAR_VOLT_PIN, INPUT);
