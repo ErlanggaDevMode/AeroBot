@@ -101,13 +101,13 @@ export async function POST(request: Request) {
         status += `\n`;
 
         if (reading) {
-          status += `🌡️ *Temp:* ${reading.temperature !== null ? `${reading.temperature.toFixed(1)} °C` : 'Error'}\n`;
-          status += `💧 *Humidity:* ${reading.humidity !== null ? `${reading.humidity.toFixed(1)} %` : 'Error'}\n`;
-          status += `🌱 *Soil Moisture:* ${reading.soil !== null ? `${reading.soil} %` : 'Error'}\n`;
-          status += `💨 *Wind Speed:* ${reading.wind_speed !== null && reading.wind_speed !== undefined ? `${reading.wind_speed.toFixed(1)} m/s` : 'N/A'}\n`;
-          status += `🔋 *Battery:* ${reading.battery_voltage !== null ? `${reading.battery_voltage.toFixed(2)} V` : 'Error'}\n`;
-          status += `☀️ *Solar Panel:* ${reading.solar_status === 'charging' ? '⚡ Charging' : '💤 Idle'}\n`;
-          status += `📶 *Signal (RSSI):* ${reading.rssi !== null ? `${reading.rssi} dBm` : 'Unknown'}\n`;
+          status += ` *Temp:* ${reading.temperature !== null ? `${reading.temperature.toFixed(1)} °C` : 'Error'}\n`;
+          status += ` *Humidity:* ${reading.humidity !== null ? `${reading.humidity.toFixed(1)} %` : 'Error'}\n`;
+          status += ` *Soil Moisture:* ${reading.soil !== null ? `${reading.soil} %` : 'Error'}\n`;
+          status += ` *Wind Speed:* ${reading.wind_speed !== null && reading.wind_speed !== undefined ? `${reading.wind_speed.toFixed(1)} m/s` : 'N/A'}\n`;
+          status += ` *Battery:* ${reading.battery_voltage !== null ? `${reading.battery_voltage.toFixed(2)} V` : 'Error'}\n`;
+          status += ` *Solar Panel:* ${reading.solar_status === 'charging' ? '⚡ Charging' : '💤 Idle'}\n`;
+          status += ` *Signal (RSSI):* ${reading.rssi !== null ? `${reading.rssi} dBm` : 'Unknown'}\n`;
         } else {
           status += `⚠️ No sensor logs received yet.\n`;
         }
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
       if (reading && reading.temperature !== null) {
         await replyToTelegram(chatId, `🌡️ *Temperature:* ${reading.temperature.toFixed(1)} °C`);
       } else {
-        await replyToTelegram(chatId, '❌ Sensor Error: Temperature reading not available.');
+        await replyToTelegram(chatId, '❌ Sensor Error: Suhu Tidak Terbaca.');
       }
     }
     else if (rawCommand === '/humidity') {
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
       if (reading && reading.humidity !== null) {
         await replyToTelegram(chatId, `💧 *Humidity:* ${reading.humidity.toFixed(1)} %`);
       } else {
-        await replyToTelegram(chatId, '❌ Sensor Error: Humidity reading not available.');
+        await replyToTelegram(chatId, '❌ Sensor Error: Kelembapan Tidak Terbaca.');
       }
     }
     else if (rawCommand === '/soil') {
@@ -138,7 +138,7 @@ export async function POST(request: Request) {
       if (reading && reading.soil !== null) {
         await replyToTelegram(chatId, `🌱 *Soil Moisture:* ${reading.soil} %`);
       } else {
-        await replyToTelegram(chatId, '❌ Sensor Error: Soil moisture reading not available.');
+        await replyToTelegram(chatId, '❌ Sensor Error: Kelembaban Tanah Tidak Terbaca.');
       }
     }
     else if (rawCommand === '/wind') {
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
         const kmh = (reading.wind_speed * 3.6).toFixed(1);
         await replyToTelegram(chatId, `💨 *Wind Speed (Anemometer):*\nSpeed: *${reading.wind_speed.toFixed(1)} m/s* (${kmh} km/h)`);
       } else {
-        await replyToTelegram(chatId, '❌ Sensor Error: Wind speed reading not available.');
+        await replyToTelegram(chatId, '❌ Sensor Error: Kecepatan Angin Tidak Terbaca.');
       }
     }
     else if (rawCommand === '/battery') {
@@ -158,7 +158,7 @@ export async function POST(request: Request) {
         const pct = reading.battery_voltage >= 13.6 ? 100 : reading.battery_voltage <= 10.0 ? 0 : Math.round((reading.battery_voltage - 10.0) * (100 / 3.6));
         await replyToTelegram(chatId, `🔋 *Battery Status:*\nVoltage: ${reading.battery_voltage.toFixed(2)} V\nPercentage: ${pct}%`);
       } else {
-        await replyToTelegram(chatId, '❌ Battery voltage monitoring not available.');
+        await replyToTelegram(chatId, '❌ Sensor Error: Tegangan Baterai Tidak Terbaca.');
       }
     }
     else if (rawCommand === '/solar') {
@@ -167,7 +167,7 @@ export async function POST(request: Request) {
       if (reading) {
         await replyToTelegram(chatId, `☀️ *Solar Panel Status:*\nState: ${reading.solar_status === 'charging' ? '⚡ Charging' : '💤 Idle'}`);
       } else {
-        await replyToTelegram(chatId, '❌ Solar panel status not available.');
+        await replyToTelegram(chatId, '❌ Status Panel Surya Tidak Terbaca.');
       }
     }
     else if (rawCommand === '/network') {
@@ -182,10 +182,10 @@ export async function POST(request: Request) {
     }
     else if (rawCommand === '/reboot') {
       if (!defaultDevice) {
-        await replyToTelegram(chatId, '⚠️ No devices found to reboot.');
+        await replyToTelegram(chatId, '⚠️ Tidak ada perangkat yang akan di reboot.');
       } else {
         await upsertDevice(defaultDevice.id, { pending_command: 'reboot' });
-        await replyToTelegram(chatId, `🔄 *Reboot Queue Command*\nReboot command is successfully queued by *${fromName}* for device \`${defaultDevice.id}\`.\nIt will execute on the next upload cycle.`);
+        await replyToTelegram(chatId, `🔄 *Reboot Queue Command*\nPerintah reboot berhasil diantrikan oleh *${fromName}* untuk perangkat \`${defaultDevice.id}\`.\nIni akan dieksekusi pada siklus unggah berikutnya.`);
       }
     }
     else if (rawCommand === '/version') {
@@ -196,7 +196,7 @@ export async function POST(request: Request) {
       }
     }
     else {
-      await replyToTelegram(chatId, '❓ *Unknown Command*\nUse /help to list available commands.');
+      await replyToTelegram(chatId, '❓ *Unknown Command*\nGunakan /help untuk daftar perintah yang tersedia.');
     }
 
     return NextResponse.json({ ok: true });

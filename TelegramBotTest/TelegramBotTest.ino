@@ -150,7 +150,7 @@ void updateLCDDisplay() {
     lcd.clear();
     if (lcdPage == 0) {
         // Page 1: Temp, Humidity, Soil, Wind Speed
-        lcd.setCursor(0, 0);
+        lcd.setCursor(0, 0);    
         if (!isnan(curTemp)) {
             lcd.print("T:");
             lcd.print(curTemp, 1);
