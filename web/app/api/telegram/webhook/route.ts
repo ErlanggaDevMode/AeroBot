@@ -25,7 +25,7 @@ async function replyToTelegram(chatId: number | string, text: string) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
+
     // Ignore updates that are not messages or don't have text
     if (!body.message || !body.message.text || !body.message.chat) {
       return NextResponse.json({ ok: true });
@@ -76,23 +76,23 @@ export async function POST(request: Request) {
       welcome += `/reboot - Force Restart Device\n`;
       welcome += `/version - Firmware Version\n`;
       await replyToTelegram(chatId, welcome);
-    } 
+    }
     else if (rawCommand === '/help') {
-      let help = `*Available Commands:*\n\n`;
+      let help = `*Perintah yang tersedia:*\n\n`;
       help += `/status, /temp, /humidity, /soil, /wind, /battery, /solar, /network, /ping, /reboot, /version`;
       await replyToTelegram(chatId, help);
-    } 
+    }
     else if (rawCommand === '/ping') {
-      await replyToTelegram(chatId, '🏓 *Pong!*\nNext.js Serverless Webhook is active and responsive.');
-    } 
+      await replyToTelegram(chatId, '🏓 *Pong!*\nNext.js Serverless Webhook berjalan aktif dan responsif.');
+    }
     else if (rawCommand === '/status') {
       if (!defaultDevice) {
-        await replyToTelegram(chatId, '⚠️ No devices found in database.');
+        await replyToTelegram(chatId, '⚠️ Tidak ada device yang terdaftar.');
       } else {
         const reading = await getLatestReading(defaultDevice.id);
         const lastSeen = defaultDevice.last_seen ? new Date(defaultDevice.last_seen) : null;
         const offsetMins = lastSeen ? Math.round((Date.now() - lastSeen.getTime()) / 60000) : null;
-        
+
         let status = `📡 *System Status: ${defaultDevice.device_name}*\n`;
         status += `Status: ${defaultDevice.status === 'online' ? '🟢 Online' : '🔴 Offline'}\n`;
         if (offsetMins !== null) {
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
         }
         await replyToTelegram(chatId, status);
       }
-    } 
+    }
     else if (rawCommand === '/temp') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
       } else {
         await replyToTelegram(chatId, '❌ Sensor Error: Temperature reading not available.');
       }
-    } 
+    }
     else if (rawCommand === '/humidity') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
       } else {
         await replyToTelegram(chatId, '❌ Sensor Error: Humidity reading not available.');
       }
-    } 
+    }
     else if (rawCommand === '/soil') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
       } else {
         await replyToTelegram(chatId, '❌ Sensor Error: Soil moisture reading not available.');
       }
-    } 
+    }
     else if (rawCommand === '/wind') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
@@ -150,7 +150,7 @@ export async function POST(request: Request) {
       } else {
         await replyToTelegram(chatId, '❌ Sensor Error: Wind speed reading not available.');
       }
-    } 
+    }
     else if (rawCommand === '/battery') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
@@ -160,7 +160,7 @@ export async function POST(request: Request) {
       } else {
         await replyToTelegram(chatId, '❌ Battery voltage monitoring not available.');
       }
-    } 
+    }
     else if (rawCommand === '/solar') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
@@ -169,7 +169,7 @@ export async function POST(request: Request) {
       } else {
         await replyToTelegram(chatId, '❌ Solar panel status not available.');
       }
-    } 
+    }
     else if (rawCommand === '/network') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
@@ -179,7 +179,7 @@ export async function POST(request: Request) {
         net += `WiFi Strength (RSSI): ${reading.rssi} dBm`;
       }
       await replyToTelegram(chatId, net);
-    } 
+    }
     else if (rawCommand === '/reboot') {
       if (!defaultDevice) {
         await replyToTelegram(chatId, '⚠️ No devices found to reboot.');
@@ -187,14 +187,14 @@ export async function POST(request: Request) {
         await upsertDevice(defaultDevice.id, { pending_command: 'reboot' });
         await replyToTelegram(chatId, `🔄 *Reboot Queue Command*\nReboot command is successfully queued by *${fromName}* for device \`${defaultDevice.id}\`.\nIt will execute on the next upload cycle.`);
       }
-    } 
+    }
     else if (rawCommand === '/version') {
       if (defaultDevice) {
         await replyToTelegram(chatId, `🏷️ *Firmware Version:* ${defaultDevice.firmware_version || '1.0'}`);
       } else {
         await replyToTelegram(chatId, '🏷️ *Firmware Version:* 1.1 (Default)');
       }
-    } 
+    }
     else {
       await replyToTelegram(chatId, '❓ *Unknown Command*\nUse /help to list available commands.');
     }

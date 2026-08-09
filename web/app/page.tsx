@@ -187,7 +187,7 @@ export default function EnterpriseDashboard() {
   const solarAmps = isCharging ? 1.33 : 0.0;
   const solarWatts = parseFloat((solarVolt * solarAmps).toFixed(1));
 
-  const windSpeedMs = latestLog?.wind_speed ?? 3.8;
+  const windSpeedMs = typeof latestLog?.wind_speed === 'number' ? latestLog.wind_speed : 0.0;
   const windSpeedKmh = parseFloat((windSpeedMs * 3.6).toFixed(1));
   const gustSpeedMs = parseFloat((windSpeedMs * 1.35).toFixed(1));
 
