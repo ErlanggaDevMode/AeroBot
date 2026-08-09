@@ -204,13 +204,23 @@ void readSensors() {
     // Auto-detect charging status (via status pin if connected, or automatic solar vs battery voltage comparison)
     isCharging = (digitalRead(SOLAR_CHARGE_PIN) == LOW) || (curSolarVolt > (curBatVolt + 0.5));
 
-    // Calculate wind speed in m/s (1 pulse/sec = ~0.667 m/s)
+    // Calculate wind speed in m/s (1 pulse/sec = ~0.667 m/s) over a stable 3-second window
     unsigned long now = millis();
     float elapsedSec = (now - lastWindCalculateTime) / 1000.0;
-    if (elapsedSec > 0) {
-        curWindSpeed = ((float)windPulseCount / elapsedSec) * 0.667;
+    if (elapsedSec >= 3.0) {
+        noInterrupts();
+        unsigned long pulses = windPulseCount;
         windPulseCount = 0;
+        interrupts();
+
+        curWindSpeed = ((float)pulses / elapsedSec) * 0.667;
         lastWindCalculateTime = now;
+
+        Serial.print("Anemometer: ");
+        Serial.print(curWindSpeed, 2);
+        Serial.print(" m/s (Pulses: ");
+        Serial.print(pulses);
+        Serial.println(")");
     }
 
     // Refresh LCD Onscreen Telemetry
