@@ -36,12 +36,17 @@
 #define SOIL_DRY_VAL 3200
 #define SOIL_WET_VAL 1200
 
-// Anemometer Pulse Counter (1 pulse/sec = 0.667 m/s)
+// Anemometer Pulse Counter with 15ms software debouncing (1 pulse/sec = 0.667 m/s)
 volatile unsigned long windPulseCount = 0;
+volatile unsigned long lastWindPulseInterruptTime = 0;
 unsigned long lastWindCalculateTime = 0;
 
 void IRAM_ATTR countWindPulse() {
-    windPulseCount++;
+    unsigned long now = millis();
+    if (now - lastWindPulseInterruptTime > 15) { // 15ms debounce window to eliminate contact bounce & noise
+        windPulseCount++;
+        lastWindPulseInterruptTime = now;
+    }
 }
 
 // Voltage divider multipliers (Calibrate with a physical multimeter!)
@@ -213,7 +218,13 @@ void readSensors() {
         windPulseCount = 0;
         interrupts();
 
-        curWindSpeed = ((float)pulses / elapsedSec) * 0.667;
+        float rawCalculatedSpeed = ((float)pulses / elapsedSec) * 0.667;
+        // Filter out extreme noise spikes (speeds > 35 m/s or 126 km/h)
+        if (rawCalculatedSpeed > 35.0) {
+            curWindSpeed = 0.0;
+        } else {
+            curWindSpeed = rawCalculatedSpeed;
+        }
         lastWindCalculateTime = now;
 
         Serial.print("Anemometer: ");
