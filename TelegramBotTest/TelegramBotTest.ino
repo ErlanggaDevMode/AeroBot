@@ -238,31 +238,53 @@ void readSensors() {
     updateLCDDisplay();
 }
 
-// SIM800L HW Boot up
+// SIM800L HW Boot up with auto-baud detection & robust EVB module support
 void setupSIM800L() {
-    Serial.println("Initializing SIM800L...");
+    Serial.println("\n--- Initializing SIM800L EVB Modem ---");
     pinMode(SIM800_PWR_PIN, OUTPUT);
     pinMode(SIM800_RST_PIN, OUTPUT);
     
-    // Hardware pulse PWRKEY to boot SIM800L
+    // Set RST line high (normal operation)
+    digitalWrite(SIM800_RST_PIN, HIGH);
     digitalWrite(SIM800_PWR_PIN, LOW);
-    delay(100);
-    digitalWrite(SIM800_PWR_PIN, HIGH);
-    delay(1000);
-    digitalWrite(SIM800_PWR_PIN, LOW);
-    delay(1000);
+    delay(500);
 
+    // Try 9600 baud first
     SerialAT.begin(9600, SERIAL_8N1, SIM800_RX_PIN, SIM800_TX_PIN);
-    delay(3000);
+    delay(1000);
     resetWatchdog();
-    
-    if (modem.restart()) {
-        Serial.println("SIM800L Modem Ready");
+
+    bool modemFound = false;
+    if (modem.init()) {
+        modemFound = true;
+        Serial.println("SIM800L detected at 9600 baud.");
+    } else {
+        // Try 115200 baud fallback
+        Serial.println("Trying 115200 baud fallback...");
+        SerialAT.begin(115200, SERIAL_8N1, SIM800_RX_PIN, SIM800_TX_PIN);
+        delay(1000);
+        resetWatchdog();
+
+        if (modem.init()) {
+            modemFound = true;
+            Serial.println("SIM800L detected at 115200 baud. Setting to 9600 baud...");
+            modem.setBaud(9600);
+            SerialAT.begin(9600, SERIAL_8N1, SIM800_RX_PIN, SIM800_TX_PIN);
+            delay(1000);
+        }
+    }
+
+    if (modemFound) {
+        Serial.println("✅ SIM800L Modem Ready!");
         Serial.print("Modem Info: ");
         Serial.println(modem.getModemInfo());
+        Serial.print("Signal Quality (0-31): ");
+        Serial.println(modem.getSignalQuality());
     } else {
-        Serial.println("Failed to start SIM800L!");
+        Serial.println("⚠️ Could not respond to AT commands!");
+        Serial.println("Check: 1) SIM800L VDD -> 3V3 ESP32, 2) TX/RX wiring (TX2=17, RX2=16), 3) 5V 2A power supply.");
     }
+    Serial.println("---------------------------------------\n");
 }
 
 // Connect WiFi with robust state management
