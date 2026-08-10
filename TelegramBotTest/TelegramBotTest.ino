@@ -331,45 +331,61 @@ void setupSIM800L() {
     Serial.println("---------------------------------------\n");
 }
 
-// Connect WiFi with robust state management
-bool connectWiFi() {
-    if (WiFi.status() == WL_CONNECTED) return true;
-    
+// Helper function to attempt connecting to a specific WiFi AP
+bool attemptWiFiConnect(const char* ssid, const char* pass, int timeoutMs) {
+    if (strlen(ssid) == 0) return false;
+
+    Serial.print("Connecting to WiFi AP [");
+    Serial.print(ssid);
+    Serial.println("]...");
+
+    WiFi.disconnect(true);
+    delay(100);
     WiFi.mode(WIFI_STA);
-    
-    static bool connectionInitiated = false;
-    if (!connectionInitiated) {
-        Serial.println("\nConnecting WiFi...");
-        // Clean start
-        WiFi.disconnect(true);
-        delay(100);
-        WiFi.mode(WIFI_STA);
-        WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-        connectionInitiated = true;
-    } else {
-        Serial.println("\nWiFi connection attempt already in progress...");
-    }
-    
+    WiFi.begin(ssid, pass);
+
     unsigned long startAttempt = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startAttempt < 10000) {
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttempt < (unsigned long)timeoutMs) {
         delay(500);
         Serial.print(".");
         resetWatchdog();
     }
-    
+
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("\nWiFi Connected");
+        Serial.println("\n✅ WiFi Connected!");
+        Serial.print("Connected SSID: ");
+        Serial.println(ssid);
         Serial.print("IP Address: ");
         Serial.println(WiFi.localIP());
         wifiRSSI = WiFi.RSSI();
-        connectionInitiated = false;
         return true;
     } else {
-        Serial.println("\nWiFi Connection Timeout.");
-        connectionInitiated = false;
+        Serial.print("\n❌ Connection Timeout for WiFi [");
+        Serial.print(ssid);
+        Serial.println("]");
         WiFi.disconnect();
         return false;
     }
+}
+
+// Connect Primary WiFi with automatic Backup WiFi failover
+bool connectWiFi() {
+    if (WiFi.status() == WL_CONNECTED) return true;
+
+    // 1. Try Primary WiFi
+    if (attemptWiFiConnect(WIFI_SSID, WIFI_PASSWORD, 8000)) {
+        return true;
+    }
+
+    // 2. Try Backup WiFi if configured
+    #if defined(WIFI_BACKUP_SSID) && strlen(WIFI_BACKUP_SSID) > 0
+    Serial.println("🔄 Switching to Backup WiFi...");
+    if (attemptWiFiConnect(WIFI_BACKUP_SSID, WIFI_BACKUP_PASSWORD, 8000)) {
+        return true;
+    }
+    #endif
+
+    return false;
 }
 
 // Connect GPRS with Non-Blocking Watchdog-Fed Network Waiting Loop & Detailed Registration Diagnostics
