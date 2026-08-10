@@ -383,11 +383,11 @@ bool connectGPRS() {
     // Non-blocking network wait loop for up to 30 seconds with active WDT resets
     unsigned long startWait = millis();
     bool networkReady = false;
-    RegStatus regState = REG_UNREGISTERED;
+    int regState = 0;
 
     while (millis() - startWait < 30000L) {
         regState = modem.getRegistrationStatus();
-        if (regState == REG_OK_HOME || regState == REG_OK_ROAMING) {
+        if (regState == 1 || regState == 5 || regState == REG_OK_HOME || regState == REG_OK_ROAMING) {
             networkReady = true;
             break;
         }
@@ -398,10 +398,10 @@ bool connectGPRS() {
     
     if (!networkReady) {
         Serial.print("\nGSM Registration State: ");
-        if (regState == REG_SEARCHING) Serial.println("SEARCHING (2G Signal weak / searching cell tower)");
-        else if (regState == REG_DENIED) Serial.println("DENIED (SIM card not activated / NIK-KK locked)");
-        else if (regState == REG_UNREGISTERED) Serial.println("UNREGISTERED (Check SIM card insertion / antenna)");
-        else Serial.println((int)regState);
+        if (regState == 2 || regState == REG_SEARCHING) Serial.println("SEARCHING (2G Signal weak / searching cell tower)");
+        else if (regState == 3 || regState == REG_DENIED) Serial.println("DENIED (SIM card not activated / NIK-KK locked)");
+        else if (regState == 0 || regState == REG_UNREGISTERED) Serial.println("UNREGISTERED (Check SIM card insertion / antenna)");
+        else Serial.println(regState);
 
         resetWatchdog();
         return false;
