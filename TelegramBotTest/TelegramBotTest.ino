@@ -372,22 +372,32 @@ bool connectWiFi() {
     }
 }
 
-// Connect GPRS
+// Connect GPRS with Watchdog Feeds
 bool connectGPRS() {
+    resetWatchdog();
     if (modem.isGprsConnected()) return true;
     
-    Serial.println("Connecting GPRS...");
-    if (!modem.waitForNetwork(30000L)) {
-        Serial.println("GSM Network registration failed.");
+    Serial.println("Connecting GPRS network...");
+    resetWatchdog();
+    
+    if (!modem.waitForNetwork(15000L)) {
+        Serial.println("GSM Network registration timeout.");
+        resetWatchdog();
         return false;
     }
+    resetWatchdog();
+
+    Serial.print("Connecting GPRS APN: ");
+    Serial.println(GSM_APN);
     
     if (modem.gprsConnect(GSM_APN, GSM_USER, GSM_PASS)) {
-        Serial.println("GPRS Connected successfully.");
+        Serial.println("✅ GPRS Connected successfully.");
+        resetWatchdog();
         return true;
     }
     
-    Serial.println("GPRS Connection failed.");
+    Serial.println("❌ GPRS Connection failed.");
+    resetWatchdog();
     return false;
 }
 
