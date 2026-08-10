@@ -238,7 +238,7 @@ void readSensors() {
     updateLCDDisplay();
 }
 
-// SIM800L HW Boot up with full multi-baud scanning & intelligent fallback
+// SIM800L HW Boot up with full multi-baud scanning, INPUT_PULLUP level shifter fix & URC listener
 void setupSIM800L() {
     Serial.println("\n--- Initializing SIM800L EVB Modem ---");
     
@@ -262,13 +262,18 @@ void setupSIM800L() {
         {18, 19}                        // Alt Pair 2: RX=18, TX=19
     };
 
-    // Helper lambda to test AT response
+    // Helper lambda to test AT response with internal pullup on RX pin
     auto testBaudAndPins = [](int rxPin, int txPin, unsigned long baud) -> bool {
+        // Enable internal pullup on ESP32 RX pin (Crucial for SIM800L EVB open-collector level shifter!)
+        pinMode(rxPin, INPUT_PULLUP);
+        pinMode(txPin, OUTPUT);
+
         SerialAT.begin(baud, SERIAL_8N1, rxPin, txPin);
-        delay(250);
+        delay(300);
 
         while (SerialAT.available()) SerialAT.read();
 
+        // Send AT sync pulse
         for (int i = 0; i < 4; i++) {
             SerialAT.print("AT\r\n");
             delay(150);
@@ -289,7 +294,7 @@ void setupSIM800L() {
         return false;
     };
 
-    Serial.println("Scanning SIM800L across 4 Pin Pairs & 4 Baud Rates...");
+    Serial.println("Scanning SIM800L across 4 Pin Pairs & 4 Baud Rates (with RX Pull-Up Fix)...");
 
     for (int p = 0; p < 4 && !modemFound; p++) {
         int rx = pinPairs[p][0];
@@ -298,6 +303,7 @@ void setupSIM800L() {
             unsigned long baud = testBauds[b];
             if (testBaudAndPins(rx, tx, baud)) {
                 modemFound = true;
+                pinMode(rx, INPUT_PULLUP);
                 // Set to 9600 standard baud
                 modem.setBaud(9600);
                 SerialAT.begin(9600, SERIAL_8N1, rx, tx);
@@ -554,12 +560,7 @@ void setup() {
     connectWiFi();
     resetWatchdog();
 
-    // Skip SIM800L scanning if WiFi is connected (e.g. 4G/LTE MiFi Modem Router setup)
-    if (WiFi.status() != WL_CONNECTED) {
-        setupSIM800L();
-    } else {
-        Serial.println("🟢 WiFi Connected via 4G/LTE Modem Router. Skipping SIM800L setup.");
-    }
+    setupSIM800L();
     resetWatchdog();
 
     Serial.println("Setup completed successfully.");
