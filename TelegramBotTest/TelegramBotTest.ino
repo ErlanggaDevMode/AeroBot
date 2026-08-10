@@ -238,7 +238,7 @@ void readSensors() {
     updateLCDDisplay();
 }
 
-// SIM800L HW Boot up with auto-baud detection & robust EVB module support
+// SIM800L HW Boot up with AT wakeup, auto-baud lock, & automatic TX/RX pin swap fallback
 void setupSIM800L() {
     Serial.println("\n--- Initializing SIM800L EVB Modem ---");
     pinMode(SIM800_PWR_PIN, OUTPUT);
@@ -249,28 +249,42 @@ void setupSIM800L() {
     digitalWrite(SIM800_PWR_PIN, LOW);
     delay(500);
 
-    // Try 9600 baud first
-    SerialAT.begin(9600, SERIAL_8N1, SIM800_RX_PIN, SIM800_TX_PIN);
-    delay(1000);
-    resetWatchdog();
-
     bool modemFound = false;
-    if (modem.init()) {
-        modemFound = true;
-        Serial.println("SIM800L detected at 9600 baud.");
-    } else {
-        // Try 115200 baud fallback
-        Serial.println("Trying 115200 baud fallback...");
-        SerialAT.begin(115200, SERIAL_8N1, SIM800_RX_PIN, SIM800_TX_PIN);
-        delay(1000);
-        resetWatchdog();
 
-        if (modem.init()) {
+    // Helper lambda to test AT response
+    auto testModemAt = [](int rxPin, int txPin, unsigned long baud) -> bool {
+        SerialAT.begin(baud, SERIAL_8N1, rxPin, txPin);
+        delay(300);
+        // Send AT sync bytes 5 times to lock SIM800L auto-baud
+        for (int i = 0; i < 5; i++) {
+            SerialAT.print("AT\r\n");
+            delay(200);
+        }
+        return modem.init();
+    };
+
+    // Test 1: Standard Wiring (ESP32 RX=16, TX=17 at 9600 baud)
+    Serial.println("Testing SIM800L (RX=16, TX=17 @ 9600 baud)...");
+    if (testModemAt(SIM800_RX_PIN, SIM800_TX_PIN, 9600)) {
+        modemFound = true;
+        Serial.println("✅ SIM800L detected on RX=16, TX=17 at 9600 baud.");
+    } 
+    // Test 2: Swapped Wiring (ESP32 RX=17, TX=16 at 9600 baud)
+    else {
+        Serial.println("Testing Swapped TX/RX (RX=17, TX=16 @ 9600 baud)...");
+        if (testModemAt(SIM800_TX_PIN, SIM800_RX_PIN, 9600)) {
             modemFound = true;
-            Serial.println("SIM800L detected at 115200 baud. Setting to 9600 baud...");
-            modem.setBaud(9600);
-            SerialAT.begin(9600, SERIAL_8N1, SIM800_RX_PIN, SIM800_TX_PIN);
-            delay(1000);
+            Serial.println("✅ SIM800L detected on Swapped Pins (RX=17, TX=16).");
+        }
+        // Test 3: 115200 baud fallback
+        else {
+            Serial.println("Testing 115200 baud fallback...");
+            if (testModemAt(SIM800_RX_PIN, SIM800_TX_PIN, 115200)) {
+                modemFound = true;
+                Serial.println("✅ SIM800L detected at 115200 baud. Setting to 9600...");
+                modem.setBaud(9600);
+                testModemAt(SIM800_RX_PIN, SIM800_TX_PIN, 9600);
+            }
         }
     }
 
@@ -282,7 +296,10 @@ void setupSIM800L() {
         Serial.println(modem.getSignalQuality());
     } else {
         Serial.println("⚠️ Could not respond to AT commands!");
-        Serial.println("Check: 1) SIM800L VDD -> 3V3 ESP32, 2) TX/RX wiring (TX2=17, RX2=16), 3) 5V 2A power supply.");
+        Serial.println("Hardware Checklist:");
+        Serial.println("1) SIM800L VDD -> Must connect to 3V3 ESP32");
+        Serial.println("2) LM2596 #1 Output -> Must set to 5.0V - 5.2V (2A Peak)");
+        Serial.println("3) SIM800L LED Status -> Must blink every 3 sec for GSM registration.");
     }
     Serial.println("---------------------------------------\n");
 }
