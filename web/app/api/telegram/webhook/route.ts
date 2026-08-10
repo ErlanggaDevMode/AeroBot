@@ -50,9 +50,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    // 2. Query DB state (needed for commands)
+    // 2. Query DB state (prioritize 'main-esp32' or the most recently active device)
     const devices = await getDevices();
-    const defaultDevice = devices.length > 0 ? devices[0] : null;
+    const defaultDevice = devices.find((d) => d.id === 'main-esp32') ||
+      (devices.length > 0 ? [...devices].sort((a, b) => new Date(b.last_seen || 0).getTime() - new Date(a.last_seen || 0).getTime())[0] : null);
 
     // Helper to get latest logs
     const getLatestReading = async (deviceId: string) => {

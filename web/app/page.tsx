@@ -201,45 +201,65 @@ export default function EnterpriseDashboard() {
     return [...historyLogs].reverse().slice(-count);
   }, [historyLogs, timeRange]);
 
-  // Chart Data Array Extractor
+  // Chart Data Array Extractor with Exact Real Sensor Readings (No mock fallbacks)
   const chartData = useMemo(() => {
-    return filteredHistory.map((l, idx) => {
+    return filteredHistory.map((l) => {
       let val = 0;
-      if (activeChart === 'temp') val = l.temperature ?? 25;
-      else if (activeChart === 'hum') val = l.humidity ?? 60;
-      else if (activeChart === 'bat') val = l.battery_voltage ?? 12.8;
-      else if (activeChart === 'solar') val = l.solar_status === 'charging' ? 18.4 : 0;
-      else if (activeChart === 'wind') val = l.wind_speed ?? 3.5;
-      else if (activeChart === 'soil') val = l.soil ?? 50;
-      else if (activeChart === 'rssi') val = l.rssi ?? -60;
-      return { val, time: new Date(l.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), rawTime: l.created_at };
+      if (activeChart === 'temp') val = typeof l.temperature === 'number' && !isNaN(l.temperature) ? l.temperature : 0;
+      else if (activeChart === 'hum') val = typeof l.humidity === 'number' && !isNaN(l.humidity) ? l.humidity : 0;
+      else if (activeChart === 'bat') val = typeof l.battery_voltage === 'number' && !isNaN(l.battery_voltage) ? l.battery_voltage : 0;
+      else if (activeChart === 'solar') val = l.solar_status === 'charging' ? 13.8 : 0;
+      else if (activeChart === 'wind') val = typeof l.wind_speed === 'number' && !isNaN(l.wind_speed) ? l.wind_speed : 0;
+      else if (activeChart === 'soil') val = typeof l.soil === 'number' && !isNaN(l.soil) ? l.soil : 0;
+      else if (activeChart === 'rssi') val = typeof l.rssi === 'number' && !isNaN(l.rssi) ? l.rssi : -100;
+
+      return {
+        val: parseFloat(val.toFixed(2)),
+        time: new Date(l.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        rawTime: l.created_at
+      };
     });
   }, [filteredHistory, activeChart]);
 
-  // SVG Line/Area Path Generator
+  // SVG Line/Area Path Generator with Metric-Specific Y-Axis Range Bounds
   const chartSvgPath = useMemo(() => {
-    if (chartData.length < 2) return { linePath: '', areaPath: '', minVal: 0, maxVal: 100, avgVal: 50 };
+    if (chartData.length < 1) return { linePath: '', areaPath: '', minVal: 0, maxVal: 100, avgVal: 0, points: [] };
     const vals = chartData.map((d) => d.val);
-    const minVal = Math.min(...vals);
-    const maxVal = Math.max(...vals);
-    const range = maxVal - minVal || 1;
-    const avgVal = parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1));
+    const minData = Math.min(...vals);
+    const maxData = Math.max(...vals);
+    const avgVal = parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2));
 
+    // Define realistic fixed Y-axis scale bounds per metric type for true representation
+    let yMin = minData;
+    let yMax = maxData;
+
+    if (activeChart === 'soil' || activeChart === 'hum') { yMin = 0; yMax = 100; }
+    else if (activeChart === 'wind') { yMin = 0; yMax = Math.max(15, maxData * 1.2); }
+    else if (activeChart === 'bat') { yMin = 0; yMax = Math.max(20, maxData * 1.1); }
+    else if (activeChart === 'solar') { yMin = 0; yMax = Math.max(20, maxData * 1.1); }
+    else if (activeChart === 'temp') { yMin = 0; yMax = Math.max(50, maxData * 1.2); }
+    else if (activeChart === 'rssi') { yMin = -100; yMax = 0; }
+
+    const range = yMax - yMin || 1;
     const width = 800;
     const height = 220;
     const padding = 20;
 
     const points = chartData.map((d, i) => {
-      const x = padding + (i / (chartData.length - 1)) * (width - padding * 2);
-      const y = height - padding - ((d.val - minVal) / range) * (height - padding * 2);
-      return `${x},${y}`;
+      const x = chartData.length === 1 ? width / 2 : padding + (i / (chartData.length - 1)) * (width - padding * 2);
+      const normalizedVal = Math.min(yMax, Math.max(yMin, d.val));
+      const y = height - padding - ((normalizedVal - yMin) / range) * (height - padding * 2);
+      return { x: parseFloat(x.toFixed(1)), y: parseFloat(y.toFixed(1)), val: d.val, time: d.time };
     });
 
-    const linePath = `M ${points.join(' L ')}`;
-    const areaPath = `${linePath} L ${width - padding},${height - padding} L ${padding},${height - padding} Z`;
+    const pointCoords = points.map(p => `${p.x},${p.y}`);
+    const linePath = points.length === 1 ? `M 20,${points[0].y} L 780,${points[0].y}` : `M ${pointCoords.join(' L ')}`;
+    const areaPath = points.length === 1 
+      ? `M 20,${points[0].y} L 780,${points[0].y} L 780,${height - padding} L 20,${height - padding} Z`
+      : `${linePath} L ${width - padding},${height - padding} L ${padding},${height - padding} Z`;
 
-    return { linePath, areaPath, minVal, maxVal, avgVal, points };
-  }, [chartData]);
+    return { linePath, areaPath, minVal: minData, maxVal: maxData, avgVal, points, yMin, yMax };
+  }, [chartData, activeChart]);
 
   return (
     <div className="min-h-screen bg-[#070B13] text-slate-100 flex flex-col font-sans select-none relative overflow-x-hidden">
@@ -821,6 +841,19 @@ export default function EnterpriseDashboard() {
                 {chartSvgPath.linePath && (
                   <path d={chartSvgPath.linePath} fill="none" stroke="#818cf8" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                 )}
+
+                {/* Interactive Data Point Circles */}
+                {chartSvgPath.points.map((pt, idx) => (
+                  <g key={idx} className="group/point">
+                    <circle
+                      cx={pt.x}
+                      cy={pt.y}
+                      r="4"
+                      className="fill-indigo-400 stroke-slate-950 stroke-2 hover:r-6 hover:fill-emerald-400 transition-all duration-150 cursor-pointer"
+                    />
+                    <title>{`${pt.time} - ${pt.val}`}</title>
+                  </g>
+                ))}
               </svg>
             </div>
 
