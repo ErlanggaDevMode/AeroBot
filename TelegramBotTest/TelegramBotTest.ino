@@ -372,19 +372,34 @@ bool connectWiFi() {
     }
 }
 
-// Connect GPRS with Watchdog Feeds
+// Connect GPRS with Non-Blocking Watchdog-Fed Network Waiting Loop
 bool connectGPRS() {
     resetWatchdog();
     if (modem.isGprsConnected()) return true;
     
-    Serial.println("Connecting GPRS network...");
+    Serial.println("Connecting GPRS network (waiting for GSM registration)...");
     resetWatchdog();
     
-    if (!modem.waitForNetwork(15000L)) {
-        Serial.println("GSM Network registration timeout.");
+    // Non-blocking network wait loop for up to 30 seconds with active WDT resets
+    unsigned long startWait = millis();
+    bool networkReady = false;
+    while (millis() - startWait < 30000L) {
+        if (modem.isNetworkConnected()) {
+            networkReady = true;
+            break;
+        }
+        delay(1000);
+        Serial.print(".");
+        resetWatchdog();
+    }
+    
+    if (!networkReady) {
+        Serial.println("\nGSM Network registration timeout.");
         resetWatchdog();
         return false;
     }
+
+    Serial.println("\n✅ GSM Network Registered!");
     resetWatchdog();
 
     Serial.print("Connecting GPRS APN: ");
