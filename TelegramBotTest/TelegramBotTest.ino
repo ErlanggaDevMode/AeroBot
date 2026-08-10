@@ -399,9 +399,16 @@ bool connectGPRS() {
     if (!networkReady) {
         Serial.print("\nGSM Registration State: ");
         if (regState == 2 || regState == REG_SEARCHING) Serial.println("SEARCHING (2G Signal weak / searching cell tower)");
-        else if (regState == 3 || regState == REG_DENIED) Serial.println("DENIED (SIM card not activated / NIK-KK locked)");
-        else if (regState == 0 || regState == REG_UNREGISTERED) Serial.println("UNREGISTERED (Check SIM card insertion / antenna)");
+        else if (regState == 3 || regState == REG_DENIED) Serial.println("DENIED (IMEI / Operator locked)");
+        else if (regState == 0 || regState == REG_UNREGISTERED) Serial.println("UNREGISTERED (Searching 2G tower)");
         else Serial.println(regState);
+
+        // Check exact SIM Card Slot detection
+        SimStatus simCheck = modem.getSimStatus();
+        Serial.print("SIM Card Slot Status: ");
+        if (simCheck == SIM_READY) Serial.println("✅ SIM Card DETECTED & READY!");
+        else if (simCheck == SIM_LOCKED) Serial.println("🔒 SIM Card LOCKED (PIN/PUK active)");
+        else Serial.println("❌ SIM Card NOT DETECTED (Slot unreadable / check insertion)");
 
         resetWatchdog();
         return false;
