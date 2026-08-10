@@ -554,7 +554,12 @@ void setup() {
     connectWiFi();
     resetWatchdog();
 
-    setupSIM800L();
+    // Skip SIM800L scanning if WiFi is connected (e.g. 4G/LTE MiFi Modem Router setup)
+    if (WiFi.status() != WL_CONNECTED) {
+        setupSIM800L();
+    } else {
+        Serial.println("🟢 WiFi Connected via 4G/LTE Modem Router. Skipping SIM800L setup.");
+    }
     resetWatchdog();
 
     Serial.println("Setup completed successfully.");
