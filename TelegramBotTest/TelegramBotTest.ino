@@ -372,7 +372,7 @@ bool connectWiFi() {
     }
 }
 
-// Connect GPRS with Non-Blocking Watchdog-Fed Network Waiting Loop
+// Connect GPRS with Non-Blocking Watchdog-Fed Network Waiting Loop & Detailed Registration Diagnostics
 bool connectGPRS() {
     resetWatchdog();
     if (modem.isGprsConnected()) return true;
@@ -383,8 +383,11 @@ bool connectGPRS() {
     // Non-blocking network wait loop for up to 30 seconds with active WDT resets
     unsigned long startWait = millis();
     bool networkReady = false;
+    RegStatus regState = REG_UNREGISTERED;
+
     while (millis() - startWait < 30000L) {
-        if (modem.isNetworkConnected()) {
+        regState = modem.getRegistrationStatus();
+        if (regState == REG_OK_HOME || regState == REG_OK_ROAMING) {
             networkReady = true;
             break;
         }
@@ -394,7 +397,12 @@ bool connectGPRS() {
     }
     
     if (!networkReady) {
-        Serial.println("\nGSM Network registration timeout.");
+        Serial.print("\nGSM Registration State: ");
+        if (regState == REG_SEARCHING) Serial.println("SEARCHING (2G Signal weak / searching cell tower)");
+        else if (regState == REG_DENIED) Serial.println("DENIED (SIM card not activated / NIK-KK locked)");
+        else if (regState == REG_UNREGISTERED) Serial.println("UNREGISTERED (Check SIM card insertion / antenna)");
+        else Serial.println((int)regState);
+
         resetWatchdog();
         return false;
     }
