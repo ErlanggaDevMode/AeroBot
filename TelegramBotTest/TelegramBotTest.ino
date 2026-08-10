@@ -238,54 +238,70 @@ void readSensors() {
     updateLCDDisplay();
 }
 
-// SIM800L HW Boot up with AT wakeup, auto-baud lock, & automatic TX/RX pin swap fallback
+// SIM800L HW Boot up with AT wakeup, auto-baud lock, & raw AT diagnostic prints
 void setupSIM800L() {
     Serial.println("\n--- Initializing SIM800L EVB Modem ---");
-    pinMode(SIM800_PWR_PIN, OUTPUT);
-    pinMode(SIM800_RST_PIN, OUTPUT);
     
-    // Set RST line high (normal operation)
-    digitalWrite(SIM800_RST_PIN, HIGH);
-    digitalWrite(SIM800_PWR_PIN, LOW);
+    // Set RST & PWR pins to passive INPUT mode so ESP32 doesn't hold SIM800L EVB in reset
+    pinMode(SIM800_PWR_PIN, INPUT);
+    pinMode(SIM800_RST_PIN, INPUT);
     delay(500);
 
     bool modemFound = false;
 
-    // Helper lambda to test AT response
+    // Helper lambda to test AT response and log raw reply
     auto testModemAt = [](int rxPin, int txPin, unsigned long baud) -> bool {
         SerialAT.begin(baud, SERIAL_8N1, rxPin, txPin);
-        delay(300);
-        // Send AT sync bytes 5 times to lock SIM800L auto-baud
+        delay(500);
+
+        // Clear any old garbage in serial buffer
+        while (SerialAT.available()) SerialAT.read();
+
+        // Send AT sync command
+        Serial.print("Sending 'AT' on RX=");
+        Serial.print(rxPin);
+        Serial.print(", TX=");
+        Serial.print(txPin);
+        Serial.print(" @ ");
+        Serial.print(baud);
+        Serial.println(" baud...");
+
         for (int i = 0; i < 5; i++) {
             SerialAT.print("AT\r\n");
             delay(200);
         }
+
+        // Print raw response received from modem
+        if (SerialAT.available()) {
+            Serial.print("Raw Modem Response: ");
+            while (SerialAT.available()) {
+                char c = SerialAT.read();
+                Serial.print(c);
+            }
+            Serial.println();
+        } else {
+            Serial.println("Raw Modem Response: [NO RESPONSE / SILENT]");
+        }
+
         return modem.init();
     };
 
     // Test 1: Standard Wiring (ESP32 RX=16, TX=17 at 9600 baud)
-    Serial.println("Testing SIM800L (RX=16, TX=17 @ 9600 baud)...");
     if (testModemAt(SIM800_RX_PIN, SIM800_TX_PIN, 9600)) {
         modemFound = true;
         Serial.println("✅ SIM800L detected on RX=16, TX=17 at 9600 baud.");
     } 
     // Test 2: Swapped Wiring (ESP32 RX=17, TX=16 at 9600 baud)
-    else {
-        Serial.println("Testing Swapped TX/RX (RX=17, TX=16 @ 9600 baud)...");
-        if (testModemAt(SIM800_TX_PIN, SIM800_RX_PIN, 9600)) {
-            modemFound = true;
-            Serial.println("✅ SIM800L detected on Swapped Pins (RX=17, TX=16).");
-        }
-        // Test 3: 115200 baud fallback
-        else {
-            Serial.println("Testing 115200 baud fallback...");
-            if (testModemAt(SIM800_RX_PIN, SIM800_TX_PIN, 115200)) {
-                modemFound = true;
-                Serial.println("✅ SIM800L detected at 115200 baud. Setting to 9600...");
-                modem.setBaud(9600);
-                testModemAt(SIM800_RX_PIN, SIM800_TX_PIN, 9600);
-            }
-        }
+    else if (testModemAt(SIM800_TX_PIN, SIM800_RX_PIN, 9600)) {
+        modemFound = true;
+        Serial.println("✅ SIM800L detected on Swapped Pins (RX=17, TX=16).");
+    }
+    // Test 3: 115200 baud fallback
+    else if (testModemAt(SIM800_RX_PIN, SIM800_TX_PIN, 115200)) {
+        modemFound = true;
+        Serial.println("✅ SIM800L detected at 115200 baud. Setting to 9600...");
+        modem.setBaud(9600);
+        testModemAt(SIM800_RX_PIN, SIM800_TX_PIN, 9600);
     }
 
     if (modemFound) {
