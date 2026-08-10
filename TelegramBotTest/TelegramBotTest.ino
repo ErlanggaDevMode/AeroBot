@@ -254,16 +254,18 @@ void setupSIM800L() {
     delay(500);
 
     bool modemFound = false;
-    unsigned long testBauds[] = {9600, 115200, 4800, 19200, 38400, 57600};
+    unsigned long testBauds[] = {9600, 115200, 4800, 19200};
     int pinPairs[][2] = {
         {SIM800_RX_PIN, SIM800_TX_PIN}, // Standard: RX=16, TX=17
-        {SIM800_TX_PIN, SIM800_RX_PIN}  // Swapped:  RX=17, TX=16
+        {SIM800_TX_PIN, SIM800_RX_PIN}, // Swapped:  RX=17, TX=16
+        {26, 27},                       // Alt Pair 1: RX=26, TX=27
+        {18, 19}                        // Alt Pair 2: RX=18, TX=19
     };
 
     // Helper lambda to test AT response
     auto testBaudAndPins = [](int rxPin, int txPin, unsigned long baud) -> bool {
         SerialAT.begin(baud, SERIAL_8N1, rxPin, txPin);
-        delay(300);
+        delay(250);
 
         while (SerialAT.available()) SerialAT.read();
 
@@ -274,7 +276,7 @@ void setupSIM800L() {
 
         if (SerialAT.available()) {
             String resp = SerialAT.readString();
-            Serial.print("  [✓] Reply on RX=");
+            Serial.print("  [✓] SUCCESS Reply on RX=");
             Serial.print(rxPin);
             Serial.print(", TX=");
             Serial.print(txPin);
@@ -287,12 +289,12 @@ void setupSIM800L() {
         return false;
     };
 
-    Serial.println("Scanning SIM800L across 6 Baud Rates & Pin Pairs...");
+    Serial.println("Scanning SIM800L across 4 Pin Pairs & 4 Baud Rates...");
 
-    for (int p = 0; p < 2 && !modemFound; p++) {
+    for (int p = 0; p < 4 && !modemFound; p++) {
         int rx = pinPairs[p][0];
         int tx = pinPairs[p][1];
-        for (int b = 0; b < 6 && !modemFound; b++) {
+        for (int b = 0; b < 4 && !modemFound; b++) {
             unsigned long baud = testBauds[b];
             if (testBaudAndPins(rx, tx, baud)) {
                 modemFound = true;
