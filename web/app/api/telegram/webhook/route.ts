@@ -153,15 +153,32 @@ export async function POST(request: Request) {
     else if (rawCommand === '/wind') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
-      const globalWindCache = global as unknown as { liveWindMap?: Map<string, number> };
+      const globalWindCache = global as unknown as {
+        liveWindMap?: Map<string, number>;
+        peakWindMap?: Map<string, { speed: number; time: number }>;
+      };
       const cachedWind = globalWindCache.liveWindMap ? globalWindCache.liveWindMap.get(defaultDevice.id) : undefined;
-      const windVal = typeof reading?.wind_speed === 'number'
+      const peakObj = globalWindCache.peakWindMap ? globalWindCache.peakWindMap.get(defaultDevice.id) : undefined;
+
+      const currentWind = typeof reading?.wind_speed === 'number'
         ? reading.wind_speed
         : typeof cachedWind === 'number'
           ? cachedWind
           : 0.0;
-      const kmh = (windVal * 3.6).toFixed(1);
-      await replyToTelegram(chatId, `💨 *Wind Speed (Anemometer):*\nSpeed: *${windVal.toFixed(1)} m/s* (${kmh} km/h)`);
+
+      const peakWind = peakObj ? peakObj.speed : (currentWind > 0 ? currentWind : 0.0);
+
+      const currKmh = (currentWind * 3.6).toFixed(1);
+      const peakKmh = (peakWind * 3.6).toFixed(1);
+
+      let msg = `💨 *Wind Speed (Anemometer):*\n`;
+      msg += `• Current Speed: *${currentWind.toFixed(1)} m/s* (${currKmh} km/h)\n`;
+      msg += `• Recent Peak Gust: *${peakWind.toFixed(1)} m/s* (${peakKmh} km/h)\n`;
+      if (currentWind === 0.0 && peakWind > 0) {
+        msg += `\n💡 _Anemometer saat ini diam (0.0 m/s). Putaran terakhir terdeteksi: ${peakWind.toFixed(1)} m/s._`;
+      }
+
+      await replyToTelegram(chatId, msg);
     }
     else if (rawCommand === '/battery') {
       if (!defaultDevice) return;

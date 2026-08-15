@@ -67,10 +67,23 @@ export async function POST(request: Request) {
     const windVal = typeof rawWind === 'number' && !isNaN(rawWind) ? rawWind : 0.0;
     const fVersion = typeof version === 'string' ? version : '1.0';
 
-    // Cache live wind speed in server memory to guarantee availability
-    const globalWindCache = global as unknown as { liveWindMap?: Map<string, number> };
+    // Cache live wind speed and recent peak gusts in server memory
+    const globalWindCache = global as unknown as {
+      liveWindMap?: Map<string, number>;
+      peakWindMap?: Map<string, { speed: number; time: number }>;
+    };
     if (!globalWindCache.liveWindMap) globalWindCache.liveWindMap = new Map<string, number>();
+    if (!globalWindCache.peakWindMap) globalWindCache.peakWindMap = new Map<string, { speed: number; time: number }>();
+
     globalWindCache.liveWindMap.set(deviceId, windVal);
+
+    if (windVal > 0) {
+      const existingPeak = globalWindCache.peakWindMap.get(deviceId);
+      const isExpired = !existingPeak || (Date.now() - existingPeak.time > 15 * 60 * 1000);
+      if (isExpired || windVal >= existingPeak.speed) {
+        globalWindCache.peakWindMap.set(deviceId, { speed: windVal, time: Date.now() });
+      }
+    }
 
     // Fetch existing device state to inspect transitions
     const deviceState = await getDevice(deviceId);
