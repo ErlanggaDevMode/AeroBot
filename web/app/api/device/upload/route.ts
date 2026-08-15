@@ -63,8 +63,8 @@ export async function POST(request: Request) {
     const batVal = typeof battery === 'number' && !isNaN(battery) ? battery : null;
     const solarVal = typeof solar === 'string' ? solar : 'unknown';
     const rssiVal = typeof rssi === 'number' ? rssi : null;
-    const rawWind = typeof windSpeed === 'number' ? windSpeed : typeof wind_speed === 'number' ? wind_speed : null;
-    const windVal = rawWind !== null && !isNaN(rawWind) ? rawWind : null;
+    const rawWind = typeof windSpeed === 'number' ? windSpeed : typeof wind_speed === 'number' ? wind_speed : 0.0;
+    const windVal = typeof rawWind === 'number' && !isNaN(rawWind) ? rawWind : 0.0;
     const fVersion = typeof version === 'string' ? version : '1.0';
 
     console.log(`📡 [Upload API] Received telemetry from [${deviceId}]: Temp: ${tempVal}°C, Bat: ${batVal}V, Wind: ${windVal} m/s`);
@@ -73,11 +73,12 @@ export async function POST(request: Request) {
     const deviceState = await getDevice(deviceId);
     const wasOffline = !deviceState || deviceState.status === 'offline';
 
-    // 3. Update Device Metadata & Get Queue Command
+    // 3. Update Device Metadata & Get Queue Command (store live wind_speed as fallback)
     const deviceUpdates: any = {
       status: 'online',
       firmware_version: fVersion,
       last_seen: new Date().toISOString(),
+      wind_speed: windVal,
     };
 
     // Populate default name only if the device is registered for the first time

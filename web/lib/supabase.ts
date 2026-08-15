@@ -10,6 +10,7 @@ export interface Device {
   status: 'online' | 'offline';
   last_seen: string | null;
   pending_command: string | null;
+  wind_speed?: number | null;
   created_at: string;
   updated_at: string;
 }

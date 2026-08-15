@@ -102,13 +102,19 @@ export async function POST(request: Request) {
         status += `\n`;
 
         if (reading) {
-          status += ` *Temp:* ${reading.temperature !== null ? `${reading.temperature.toFixed(1)} °C` : 'Error'}\n`;
-          status += ` *Humidity:* ${reading.humidity !== null ? `${reading.humidity.toFixed(1)} %` : 'Error'}\n`;
-          status += ` *Soil Moisture:* ${reading.soil !== null ? `${reading.soil} %` : 'Error'}\n`;
-          status += ` *Wind Speed:* ${reading.wind_speed !== null && reading.wind_speed !== undefined ? `${reading.wind_speed.toFixed(1)} m/s` : 'N/A'}\n`;
-          status += ` *Battery:* ${reading.battery_voltage !== null ? `${reading.battery_voltage.toFixed(2)} V` : 'Error'}\n`;
-          status += ` *Solar Panel:* ${reading.solar_status === 'charging' ? '⚡ Charging' : '💤 Idle'}\n`;
-          status += ` *Signal (RSSI):* ${reading.rssi !== null ? `${reading.rssi} dBm` : 'Unknown'}\n`;
+          const windVal = typeof reading.wind_speed === 'number'
+            ? reading.wind_speed
+            : typeof defaultDevice.wind_speed === 'number'
+              ? defaultDevice.wind_speed
+              : 0.0;
+
+          status += `🌡️ *Temp:* ${reading.temperature !== null ? `${reading.temperature.toFixed(1)} °C` : 'Error'}\n`;
+          status += `💧 *Humidity:* ${reading.humidity !== null ? `${reading.humidity.toFixed(1)} %` : 'Error'}\n`;
+          status += `🌱 *Soil Moisture:* ${reading.soil !== null ? `${reading.soil} %` : 'Error'}\n`;
+          status += `💨 *Wind Speed:* ${windVal.toFixed(1)} m/s\n`;
+          status += `🔋 *Battery:* ${reading.battery_voltage !== null ? `${reading.battery_voltage.toFixed(2)} V` : 'Error'}\n`;
+          status += `☀️ *Solar Panel:* ${reading.solar_status === 'charging' ? '⚡ Charging' : '💤 Idle'}\n`;
+          status += `📶 *Signal (RSSI):* ${reading.rssi !== null ? `${reading.rssi} dBm` : 'Unknown'}\n`;
         } else {
           status += `⚠️ No sensor logs received yet.\n`;
         }
@@ -145,12 +151,13 @@ export async function POST(request: Request) {
     else if (rawCommand === '/wind') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
-      if (reading && reading.wind_speed !== null && reading.wind_speed !== undefined) {
-        const kmh = (reading.wind_speed * 3.6).toFixed(1);
-        await replyToTelegram(chatId, `💨 *Wind Speed (Anemometer):*\nSpeed: *${reading.wind_speed.toFixed(1)} m/s* (${kmh} km/h)`);
-      } else {
-        await replyToTelegram(chatId, '❌ Sensor Error: Kecepatan Angin Tidak Terbaca.');
-      }
+      const windVal = typeof reading?.wind_speed === 'number'
+        ? reading.wind_speed
+        : typeof defaultDevice?.wind_speed === 'number'
+          ? defaultDevice.wind_speed
+          : 0.0;
+      const kmh = (windVal * 3.6).toFixed(1);
+      await replyToTelegram(chatId, `💨 *Wind Speed (Anemometer):*\nSpeed: *${windVal.toFixed(1)} m/s* (${kmh} km/h)`);
     }
     else if (rawCommand === '/battery') {
       if (!defaultDevice) return;
