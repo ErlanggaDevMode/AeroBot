@@ -40,6 +40,7 @@
 volatile unsigned long windPulseCount = 0;
 volatile unsigned long lastWindPulseInterruptTime = 0;
 unsigned long lastWindCalculateTime = 0;
+float maxWindSpeedInterval = 0.0;
 
 void IRAM_ATTR countWindPulse() {
     unsigned long now = millis();
@@ -224,6 +225,9 @@ void readSensors() {
             curWindSpeed = 0.0;
         } else {
             curWindSpeed = rawCalculatedSpeed;
+            if (curWindSpeed > maxWindSpeedInterval) {
+                maxWindSpeedInterval = curWindSpeed;
+            }
         }
         lastWindCalculateTime = now;
 
@@ -558,7 +562,8 @@ void processUpload() {
     else doc["humidity"] = curHum;
     
     doc["soil"] = curSoil;
-    doc["windSpeed"] = curWindSpeed;
+    doc["windSpeed"] = (maxWindSpeedInterval > 0.0) ? maxWindSpeedInterval : curWindSpeed;
+    maxWindSpeedInterval = 0.0; // Reset peak gust for next upload interval
     doc["battery"] = curBatVolt;
     doc["solar"] = isCharging ? "charging" : "idle";
     doc["rssi"] = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : -100;
