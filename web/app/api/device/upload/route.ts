@@ -67,18 +67,20 @@ export async function POST(request: Request) {
     const windVal = typeof rawWind === 'number' && !isNaN(rawWind) ? rawWind : 0.0;
     const fVersion = typeof version === 'string' ? version : '1.0';
 
-    console.log(`📡 [Upload API] Received telemetry from [${deviceId}]: Temp: ${tempVal}°C, Bat: ${batVal}V, Wind: ${windVal} m/s`);
+    // Cache live wind speed in server memory to guarantee availability
+    const globalWindCache = global as unknown as { liveWindMap?: Map<string, number> };
+    if (!globalWindCache.liveWindMap) globalWindCache.liveWindMap = new Map<string, number>();
+    globalWindCache.liveWindMap.set(deviceId, windVal);
 
     // Fetch existing device state to inspect transitions
     const deviceState = await getDevice(deviceId);
     const wasOffline = !deviceState || deviceState.status === 'offline';
 
-    // 3. Update Device Metadata & Get Queue Command (store live wind_speed as fallback)
+    // 3. Update Device Metadata & Get Queue Command (strictly schema-aligned)
     const deviceUpdates: any = {
       status: 'online',
       firmware_version: fVersion,
       last_seen: new Date().toISOString(),
-      wind_speed: windVal,
     };
 
     // Populate default name only if the device is registered for the first time
@@ -87,10 +89,9 @@ export async function POST(request: Request) {
     }
 
     const updatedDevice = await upsertDevice(deviceId, deviceUpdates);
+    const pendingCommand = updatedDevice ? updatedDevice.pending_command : null;
 
-    const pendingCommand = updatedDevice.pending_command;
-
-    // 4. Log Sensor Telemetry (with graceful fallback if DB schema hasn't added wind_speed yet)
+    // 4. Log Sensor Telemetry
     try {
       await insertSensorLog({
         device_id: deviceId,
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
         wind_speed: windVal,
       });
     } catch (dbErr: any) {
-      console.warn('⚠️ [Upload API] Failed to log telemetry with wind_speed, retrying without wind_speed:', dbErr.message);
+      console.warn('⚠️ [Upload API] Failed to log telemetry with wind_speed:', dbErr.message);
       await insertSensorLog({
         device_id: deviceId,
         temperature: tempVal,

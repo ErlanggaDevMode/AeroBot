@@ -378,12 +378,12 @@ bool connectWiFi() {
     }
 
     // 2. Try Backup WiFi if configured
-    #if defined(WIFI_BACKUP_SSID) && strlen(WIFI_BACKUP_SSID) > 0
+    if defined(WIFI_BACKUP_SSID) && strlen(WIFI_BACKUP_SSID) > 0
     Serial.println("🔄 Switching to Backup WiFi...");
     if (attemptWiFiConnect(WIFI_BACKUP_SSID, WIFI_BACKUP_PASSWORD, 8000)) {
         return true;
     }
-    #endif
+    endif
 
     return false;
 }
@@ -624,6 +624,9 @@ void setup() {
 
 void loop() {
     resetWatchdog();
+
+    // Read physical sensors continuously so curWindSpeed & telemetry are always updated
+    readSensors();
 
     // Rotate LCD Telemetry Pages
     updateLCDDisplay();

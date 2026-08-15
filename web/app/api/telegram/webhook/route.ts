@@ -102,10 +102,12 @@ export async function POST(request: Request) {
         status += `\n`;
 
         if (reading) {
+          const globalWindCache = global as unknown as { liveWindMap?: Map<string, number> };
+          const cachedWind = globalWindCache.liveWindMap ? globalWindCache.liveWindMap.get(defaultDevice.id) : undefined;
           const windVal = typeof reading.wind_speed === 'number'
             ? reading.wind_speed
-            : typeof defaultDevice.wind_speed === 'number'
-              ? defaultDevice.wind_speed
+            : typeof cachedWind === 'number'
+              ? cachedWind
               : 0.0;
 
           status += `🌡️ *Temp:* ${reading.temperature !== null ? `${reading.temperature.toFixed(1)} °C` : 'Error'}\n`;
@@ -151,10 +153,12 @@ export async function POST(request: Request) {
     else if (rawCommand === '/wind') {
       if (!defaultDevice) return;
       const reading = await getLatestReading(defaultDevice.id);
+      const globalWindCache = global as unknown as { liveWindMap?: Map<string, number> };
+      const cachedWind = globalWindCache.liveWindMap ? globalWindCache.liveWindMap.get(defaultDevice.id) : undefined;
       const windVal = typeof reading?.wind_speed === 'number'
         ? reading.wind_speed
-        : typeof defaultDevice?.wind_speed === 'number'
-          ? defaultDevice.wind_speed
+        : typeof cachedWind === 'number'
+          ? cachedWind
           : 0.0;
       const kmh = (windVal * 3.6).toFixed(1);
       await replyToTelegram(chatId, `💨 *Wind Speed (Anemometer):*\nSpeed: *${windVal.toFixed(1)} m/s* (${kmh} km/h)`);
